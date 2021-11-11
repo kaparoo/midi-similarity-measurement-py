@@ -8,8 +8,7 @@ import pathlib
 import random
 from typing import Any, Final, Generator, List, Tuple, Union
 
-from annotation import Annotation
-from midi_parser import MidiParser
+from midi import Annotation, MidiParser
 
 __all__ = ["spawn"]
 

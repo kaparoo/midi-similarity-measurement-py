@@ -1,5 +1,6 @@
 # -*- coding: utf-* -*-
 
+import function
 import midi
 import numpy as np
 
@@ -20,7 +21,7 @@ def euclidean(source_histogram: np.ndarray, target_histogram: np.ndarray) -> flo
 def levenshtein(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
-    cost_metric=lambda s, t: abs(s - t),
+    cost_metric: function.DistanceMetric = function.get_distance_metric(),
 ) -> float:
     assert isinstance(source_sequence, midi.MIDIUnitSequence)
     assert isinstance(target_sequence, midi.MIDIUnitSequence)
@@ -52,7 +53,7 @@ def levenshtein(
 def dtw(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
-    cost_metric=lambda s, t: abs(s - t),
+    cost_metric: function.DistanceMetric = function.get_distance_metric(),
 ) -> float:
     assert isinstance(source_sequence, midi.MIDIUnitSequence)
     assert isinstance(target_sequence, midi.MIDIUnitSequence)

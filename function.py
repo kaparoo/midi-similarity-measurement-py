@@ -44,17 +44,17 @@ def max_midi_key_unit(sequence: midi.MIDIUnitSequence) -> midi.MIDIUnit:
 
 
 def onset_nearest_unit_factory(
-    settling_frame: int, compensate_frame: int
+    settling_frame: int, compensation_frame: int
 ) -> UnitMetric:
     geometric_ratio = 0.1 ** (1 / settling_frame)
-    unbalanced_comp_weight = 1 / geometric_ratio ** compensate_frame
+    unbalanced_comp_weight = 1 / geometric_ratio ** compensation_frame
 
     def onset_nearest_unit(sequence: midi.MIDIUnitSequence) -> midi.MIDIUnit:
         significant_unit = sequence[0]
         for i in range(1, len(sequence)):
             if (
-                significant_unit.velocity
-                <= unbalanced_comp_weight * sequence[i].velocity
+                significant_unit.get_velocity()
+                <= unbalanced_comp_weight * sequence[i].get_velocity()
             ):
                 significant_unit = sequence[i]
         return significant_unit
@@ -77,9 +77,7 @@ DistanceMetric = Callable[[midi.MIDIUnit, midi.MIDIUnit], float]
 
 
 def default_distance(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
-    # A cosine similarity is supported by substracting two `MIDIUnit` objects
-    # See MIDIUnit.__sub__ (midi.py/20)
-    return abs(s - t)
+    return float(s.get_midi_key() != t.get_midi_key())
 
 
 ALLOWED_DISTANCE_METRICS = ["default"]

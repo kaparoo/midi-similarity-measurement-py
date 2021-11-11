@@ -6,13 +6,17 @@ import numpy as np
 import os
 import pathlib
 import random
-from typing import Any, Final, Generator, List, Tuple, Union
+from typing import Any, Generator, List, Tuple, Union
 
 from midi import Annotation, MidiParser
 
 __all__ = ["spawn"]
 
-_SCORE_MIDI_FILE: Final[str] = "midi_score.mid"
+_SCORE_MIDI_FILE = "midi_score.mid"
+
+
+def _clamp(val: numbers.Real, min_=float("-inf"), max_=float("inf")):
+    return max(min(val, max_), min_)
 
 
 def _debug_log(*args: Any):
@@ -72,9 +76,11 @@ def spawn(
     frame_per_second: int = 20,
     shuffle: bool = False,
 ) -> Generator[Tuple[np.ndarray, np.ndarray, Tuple[int, int]], None, None]:
+    _debug_log(dataset_root, slice_duration, expansion_rate, frame_per_second)
     dataset_root, slice_duration, expansion_rate, frame_per_second = _verify_arguments(
         dataset_root, slice_duration, expansion_rate, frame_per_second
     )
+    _debug_log(dataset_root, slice_duration, expansion_rate, frame_per_second)
 
     midi_parser = MidiParser(show=False)
 
@@ -162,11 +168,18 @@ def spawn(
                         _debug_log(f"perf_tail: {perf_matrix_tail}")
                         _debug_log(f"perf_len: {perf_len}")
 
+                        num_perf_frames = perf_midi_matrix.shape[-1]
                         expanded_perf_len = expansion_rate * perf_len
                         expanded_perf_matrix_head = perf_matrix_head - random.randint(
                             0, math.floor((expansion_rate - 1.0) * perf_len)
                         )
+                        expanded_perf_matrix_head = int(
+                            _clamp(expanded_perf_matrix_head, 0.0, num_perf_frames,)
+                        )
                         expanded_perf_matrix_tail = perf_matrix_head + expanded_perf_len
+                        expanded_perf_matrix_tail = int(
+                            _clamp(expanded_perf_matrix_tail, 0.0, num_perf_frames,)
+                        )
 
                         _debug_log(f"expanded_perf_head: {expanded_perf_matrix_head}")
                         _debug_log(f"expanded_perf_tail: {expanded_perf_matrix_tail}")

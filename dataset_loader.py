@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 
+import math
 import numbers
-
+import numpy as np
 import os
 import pathlib
+import random
+from typing import Any, Final, Generator, List, Tuple, Union
 
-from typing import Any, Final, List, Tuple, Union
+from annotation import Annotation
+from midi_parser import MidiParser
 
 __all__ = ["spawn"]
 
-_SCORE_MIDI_FILE: Final[str] = u"midi_score.mid"
+_SCORE_MIDI_FILE: Final[str] = "midi_score.mid"
 
 
 def _debug_log(*args: Any):
@@ -67,25 +71,126 @@ def spawn(
     slice_duration: numbers.Real = 1.0,
     expansion_rate: numbers.Real = 1.5,
     frame_per_second: int = 20,
-):
+    shuffle: bool = False,
+) -> Generator[Tuple[np.ndarray, np.ndarray, Tuple[int, int]], None, None]:
     dataset_root, slice_duration, expansion_rate, frame_per_second = _verify_arguments(
         dataset_root, slice_duration, expansion_rate, frame_per_second
     )
 
+    midi_parser = MidiParser(show=False)
+
+    # TODO(kaparoo): Replace logic to use methods of pathlib.Path (e.g. iterdir, glob)
     dataset_infos: List[Tuple[pathlib.Path, List[str]]] = []
-
-    for path, _, files in os.walk(dataset_root):
+    for root, _, files in os.walk(dataset_root):
         if _SCORE_MIDI_FILE in files:
-            perf_files = [
-                file
-                for file in files
-                if file != _SCORE_MIDI_FILE and os.path.splitext()[-1] != "mid"
-            ]
+            root = pathlib.Path(root)
+            perf_files = filter(
+                lambda file: file is not _SCORE_MIDI_FILE and file[-4:] == ".mid",
+                files,
+            )
+            dataset_infos.append((root, perf_files))
+    else:
+        if not dataset_infos:
+            raise FileNotFoundError()
+        if shuffle:
+            random.shuffle(dataset_infos)
 
-    for path, perf_midi_files in dataset_infos:
-        score_midi_path = path / _SCORE_MIDI_FILE
+    for root_path, perf_midi_files in dataset_infos:
+        _debug_log(f"root_path: {root_path}")
+
+        score_midi_path = root_path / _SCORE_MIDI_FILE
+        _, _, _, score_midi_matrix, _ = midi_parser.process(
+            str(score_midi_path), return_midi_matrix=True, fps=frame_per_second
+        )  # score_midi_matrix: 128 x N'
+        score_annotation = Annotation(root_path, score_midi_path.stem)
+
+        _debug_log(f"score_midi_path: {score_midi_path}")
+        _debug_log(f"score_midi_matrix.shape: {score_midi_matrix.shape}")
+        _debug_log("----------------------------------------")
 
         for perf_midi_file in perf_midi_files:
-            perf_midi_path = path / perf_midi_file
+            perf_midi_path = root_path / perf_midi_file
+            _, _, _, perf_midi_matrix, _ = midi_parser.process(
+                str(perf_midi_path), return_midi_matrix=True, fps=frame_per_second
+            )  # perf_midi_matrix: 128 x M'
+            perf_annotation = Annotation(root_path, perf_midi_path.stem)
 
-            print()
+            _debug_log(f"perf_midi_path: {perf_midi_path}")
+            _debug_log(f"perf_midi_matrix.shape: {perf_midi_matrix.shape}")
+
+            prev_index = 0
+            prev_score_onset = score_annotation[0]
+            for curr_index, curr_score_onset in enumerate(score_annotation):
+                if curr_score_onset - prev_score_onset >= slice_duration:
+                    _debug_log(f"[INDEX {curr_index}]")
+                    try:
+                        _debug_log(f"prev_score_onset: {prev_score_onset}")
+                        _debug_log(f"curr_score_onset: {curr_score_onset}")
+
+                        score_matrix_head = math.floor(
+                            frame_per_second * prev_score_onset
+                        )
+                        score_matrix_tail = math.floor(
+                            frame_per_second * curr_score_onset
+                        )
+
+                        _debug_log(f"score_matrix_head: {score_matrix_head}")
+                        _debug_log(f"score_matrix_tail: {score_matrix_tail}")
+
+                        sliced_score_midi_matrix = score_midi_matrix[
+                            :, score_matrix_head:score_matrix_tail
+                        ]  # 128 x N
+
+                        _debug_log(
+                            f"sliced_score_midi_matrix.shape: {sliced_score_midi_matrix.shape}"
+                        )
+
+                        prev_perf_onset = perf_annotation[prev_index]
+                        curr_perf_onset = perf_annotation[curr_index]
+
+                        _debug_log(f"prev_perf_onset: {prev_perf_onset}")
+                        _debug_log(f"curr_perf_onset: {curr_perf_onset}")
+
+                        perf_matrix_head = math.floor(
+                            frame_per_second * prev_perf_onset
+                        )
+                        perf_matrix_tail = math.floor(
+                            frame_per_second * curr_perf_onset
+                        )
+                        perf_len = perf_matrix_tail - perf_matrix_head
+
+                        _debug_log(f"perf_head: {perf_matrix_head}")
+                        _debug_log(f"perf_tail: {perf_matrix_tail}")
+                        _debug_log(f"perf_len: {perf_len}")
+
+                        expanded_perf_len = expansion_rate * perf_len
+                        expanded_perf_matrix_head = perf_matrix_head - random.randint(
+                            0, math.floor((expansion_rate - 1.0) * perf_len)
+                        )
+                        expanded_perf_matrix_tail = perf_matrix_head + expanded_perf_len
+
+                        _debug_log(f"expanded_perf_head: {expanded_perf_matrix_head}")
+                        _debug_log(f"expanded_perf_tail: {expanded_perf_matrix_tail}")
+                        _debug_log(f"expanded_perf_len: {expanded_perf_len}")
+
+                        sliced_perf_midi_matrix = perf_midi_matrix[
+                            :, expanded_perf_matrix_head:expanded_perf_matrix_tail
+                        ]  # 128 x M
+
+                        _debug_log(
+                            f"sliced_perf_midi_matrix.shape: {sliced_perf_midi_matrix.shape}"
+                        )
+
+                        yield sliced_score_midi_matrix, sliced_perf_midi_matrix, (
+                            perf_matrix_head - expanded_perf_matrix_head,
+                            perf_matrix_tail - expanded_perf_matrix_head,
+                        )
+                    except Exception as e:
+                        _debug_log(e)
+                        continue
+                    finally:
+                        prev_index, prev_score_onset = curr_index, curr_score_onset
+
+            _debug_log("----------------------------------------")
+
+        _debug_log("========================================")

@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import enum
-import numbers
+from enum import Enum
+from numbers import Integral, Real
 from typing import Tuple, Union
 
-from .constant import MAX_MIDI_KEY
+from .constant import MAX_MIDI_KEY, MIN_MIDI_KEY
 
 __all__ = ["MIDIUnit"]
 
 
-class _Type(enum.Enum):
-    Note = 0,
-    Rest = 1,
+class _Type(Enum):
+    Note = (0,)
+    Rest = (1,)
 
 
 class MIDIUnit(object):
@@ -19,12 +19,13 @@ class MIDIUnit(object):
     __slots__ = ["_type", "_midi_key", "_velocity"]
 
     def __init__(self, midi_key: int, velocity: float) -> None:
-        if not isinstance(midi_key, numbers.Integral):
+        # TODO(kaparoo): Rewrite error messages more properly
+        if not isinstance(midi_key, Integral):
             raise TypeError(type(midi_key))
-        if not isinstance(velocity, numbers.Real):
+        if not isinstance(velocity, Real):
             raise TypeError(type(velocity))
 
-        if MAX_MIDI_KEY >= midi_key >= 0 and velocity >= 0.0:
+        if MAX_MIDI_KEY >= midi_key >= MIN_MIDI_KEY and velocity >= 0.0:
             self._type = _Type.Note
             self._midi_key = int(midi_key)
             self._velocity = float(velocity)
@@ -53,6 +54,6 @@ class MIDIUnit(object):
 
     def __str__(self) -> str:
         if self.is_note():
-            return f"Note({self._midi_key}, {self._velocity})"
+            return "Note(%d, %.4f)" % (self._midi_key, self._velocity)
         else:
-            return u"Rest"
+            return "Rest"

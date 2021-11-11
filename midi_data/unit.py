@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from enum import Enum
+import enum
+import numbers
 from typing import Tuple, Union
 
 from .constant import MAX_MIDI_KEY
@@ -8,7 +9,7 @@ from .constant import MAX_MIDI_KEY
 __all__ = ["MIDIUnit"]
 
 
-class _Type(Enum):
+class _Type(enum.Enum):
     Note = 0,
     Rest = 1,
 
@@ -18,10 +19,15 @@ class MIDIUnit(object):
     __slots__ = ["_type", "_midi_key", "_velocity"]
 
     def __init__(self, midi_key: int, velocity: float) -> None:
+        if not isinstance(midi_key, numbers.Integral):
+            raise TypeError(type(midi_key))
+        if not isinstance(velocity, numbers.Real):
+            raise TypeError(type(velocity))
+
         if MAX_MIDI_KEY >= midi_key >= 0 and velocity >= 0.0:
             self._type = _Type.Note
-            self._midi_key = midi_key
-            self._velocity = velocity
+            self._midi_key = int(midi_key)
+            self._velocity = float(velocity)
         else:
             self._type = _Type.Rest
             self._midi_key = MAX_MIDI_KEY + 1

@@ -3,10 +3,7 @@
 from enum import Enum
 from typing import Tuple, Union
 
-if __name__ == "__main__":
-    from constant import MAX_MIDI_KEY
-else:
-    from .constant import MAX_MIDI_KEY
+from .constant import MAX_MIDI_KEY
 
 __all__ = ["MIDIUnit"]
 
@@ -53,14 +50,3 @@ class MIDIUnit(object):
             return f"Note({self._midi_key}, {self._velocity})"
         else:
             return u"Rest"
-
-
-if __name__ == "__main__":
-    unit1 = MIDIUnit(12, 3.14)
-    print(unit1)  # Note(12, 3.14)
-
-    unit2 = MIDIUnit(137, 0.0)
-    print(unit2)  # Rest
-
-    unit3 = MIDIUnit(37, -124)
-    print(unit3)  # Rest

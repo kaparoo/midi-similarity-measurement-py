@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import midi
-from typing import Any, Callable
+from typing import Callable
 
 # Decay functions for converting midi matrix to MIDIUnitSequenceList
 DecayFn = Callable[[float], float]
-
-
-def reversed_ramp_decay(prev_velocity: float) -> float:
-    assert prev_velocity >= 1
-    if prev_velocity > 1:
-        return prev_velocity - 1
-    else:
-        return 1
 
 
 def exponential_decay_factory(settling_frame: int) -> DecayFn:
@@ -25,63 +17,47 @@ def exponential_decay_factory(settling_frame: int) -> DecayFn:
     return exponential_decay
 
 
-ALLOWED_DECAY_FNS = ["reversed_ramp", "exponential"]
-
-
-def get_decay_fn(fn_name: str = "exponential", *args) -> DecayFn:
-    if fn_name == "reversed_ramp":
-        return reversed_ramp_decay
-    else:
-        return exponential_decay_factory(*args)
-
-
 # Metrics for choosing significant unit for each `MIDIUnitSequence`
 UnitMetric = Callable[[midi.MIDIUnitSequence], midi.MIDIUnit]
-
-
-def max_midi_key_unit(sequence: midi.MIDIUnitSequence) -> midi.MIDIUnit:
-    return sequence[-1]
 
 
 def onset_nearest_unit_factory(
     settling_frame: int, compensation_frame: int
 ) -> UnitMetric:
     geometric_ratio = 0.1 ** (1 / settling_frame)
-    unbalanced_comp_weight = 1 / geometric_ratio ** compensation_frame
+    unbalanced_comp_weight = (1 / geometric_ratio) ** compensation_frame
 
     def onset_nearest_unit(sequence: midi.MIDIUnitSequence) -> midi.MIDIUnit:
         significant_unit = sequence[0]
-        for i in range(1, len(sequence)):
+        for unit in sequence[1:]:
             if (
                 significant_unit.get_velocity()
-                <= unbalanced_comp_weight * sequence[i].get_velocity()
+                <= unbalanced_comp_weight * unit.get_velocity()
             ):
-                significant_unit = sequence[i]
+                significant_unit = unit
         return significant_unit
 
     return onset_nearest_unit
 
 
-ALLOWED_UNIT_METRICS = ["max_midi_key", "onset_nearest"]
+# Cost metrics for time warping algorithms
+CostMetric = Callable[[midi.MIDIUnit, midi.MIDIUnit], float]
 
 
-def get_unit_metric(metric_name: str = "max_midi_key", *args) -> UnitMetric:
-    if metric_name == "onset_nearest":
-        return onset_nearest_unit_factory(*args)
-    else:
-        return max_midi_key_unit
-
-
-# Distance metrics for time warping algorithms
-DistanceMetric = Callable[[midi.MIDIUnit, midi.MIDIUnit], float]
-
-
-def default_distance(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
+def compare_cost_fn(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
     return float(s.get_midi_key() != t.get_midi_key())
 
 
-ALLOWED_DISTANCE_METRICS = ["default"]
-
-
-def get_distance_metric(metric_name: str = "default") -> DistanceMetric:
-    return default_distance
+def distance_cost_fn(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
+    if s.is_note() and t.is_note():
+        k1, v1 = s.get_values()
+        k2, v2 = t.get_values()
+        return ((k1 - k2) ** 2 + (v1 - v2) ** 2) ** 0.5
+    elif s.is_note():
+        k, v = s.get_values()
+        return k + v
+    elif t.is_note():
+        k, v = t.get_values()
+        return k + v
+    else:
+        return 0

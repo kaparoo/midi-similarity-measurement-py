@@ -3,21 +3,65 @@
 import algorithm
 import function
 import midi
+import numbers
 import numpy as np
-from typing import Tuple
+from typing import Dict, Tuple
+from time import time
+
+
+# TODO(kaparoo): Rewrite error messages more properly
+def _verify_arguments(
+    source_midi_matrix: np.ndarray, target_midi_matrix: np.ndarray, onset_weight: float,
+) -> Tuple[np.ndarray, np.ndarray, float]:
+
+    if not isinstance(source_midi_matrix, np.ndarray):
+        raise TypeError(type(source_midi_matrix))
+    else:
+        shape_ = source_midi_matrix.shape
+        if shape_[0] != midi.NUM_MIDI_KEYS:
+            raise ValueError(shape_)
+        elif len(shape_) > 2:
+            return ValueError(shape_)
+        elif len(shape_) == 1:
+            source_midi_matrix = np.reshape(source_midi_matrix, [midi.NUM_MIDI_KEYS, 1])
+
+    if not isinstance(target_midi_matrix, np.ndarray):
+        raise TypeError(type(target_midi_matrix))
+    else:
+        shape_ = target_midi_matrix.shape
+        if shape_[0] != midi.NUM_MIDI_KEYS:
+            raise ValueError(shape_)
+        elif len(shape_) > 2:
+            return ValueError(shape_)
+        elif len(shape_) == 1:
+            target_midi_matrix = np.reshape(target_midi_matrix, [midi.NUM_MIDI_KEYS, 1])
+
+    if not isinstance(onset_weight, numbers.Real):
+        raise TypeError(type(onset_weight))
+    elif onset_weight <= 0.0:
+        raise ValueError(onset_weight)
+    else:
+        onset_weight = float(onset_weight)
+
+    return source_midi_matrix, target_midi_matrix, onset_weight
 
 
 def score_similarity(
     source_midi_matrix: np.ndarray,
     target_midi_matrix: np.ndarray,
-    onset_weight: int = 10.0,
-    decay_fn: function.DecayFn = function.reversed_ramp_decay,
-    unit_metric: function.UnitMetric = function.max_midi_key_unit,
-    distance_metric: function.DistanceMetric = lambda s, t: float(
-        s.get_midi_key() != t.get_midi_key()
-    ),
-    time_warping_algorithm: str = "levenshtein",
-) -> Tuple[float, float]:
+    onset_weight: float,
+    decay_fn: function.DecayFn,
+    unit_metric: function.UnitMetric,
+    cost_metric: function.CostMetric,
+    check_execution_times: bool = False,
+) -> Tuple[float, float, Dict[str, float]]:
+
+    source_midi_matrix, target_midi_matrix, onset_weight = _verify_arguments(
+        source_midi_matrix, target_midi_matrix, onset_weight
+    )
+
+    if check_execution_times:
+        timestamp1 = time()
 
     source = midi.MIDIUnitSequenceList.from_midi_matrix(
         source_midi_matrix, onset_weight, decay_fn
@@ -26,24 +70,45 @@ def score_similarity(
         target_midi_matrix, onset_weight, decay_fn
     )
 
+    if check_execution_times:
+        timestamp2 = time()
+
     source_histogram = source.to_pitch_histogram()
     target_histogram = target.to_pitch_histogram()
+
+    if check_execution_times:
+        timestamp3 = time()
 
     source_sequence = source.to_significant_unit_sequence(unit_metric)
     target_sequence = target.to_significant_unit_sequence(unit_metric)
 
+    if check_execution_times:
+        timestamp4 = time()
+
     pitch_similarity = algorithm.euclidean(source_histogram, target_histogram)
 
-    if time_warping_algorithm == "dtw":
-        significant_note_similarity = algorithm.dtw(
-            source_sequence, target_sequence, distance_metric,
-        )
-    else:
-        significant_note_similarity = algorithm.levenshtein(
-            source_sequence, target_sequence, distance_metric,
-        )
+    if check_execution_times:
+        timestamp5 = time()
 
-    return pitch_similarity, significant_note_similarity
+    significant_note_similarity = algorithm.levenshtein(
+        source_sequence, target_sequence, cost_metric,
+    )
+
+    if check_execution_times:
+        timestamp6 = time()
+
+    if not check_execution_times:
+        return pitch_similarity, significant_note_similarity, {}
+    else:
+        execution_times = {
+            "from_midi_matrix": timestamp2 - timestamp1,
+            "to_pitch_histogram": timestamp3 - timestamp2,
+            "to_significant_unit_sequence": timestamp4 - timestamp3,
+            "euclidean": timestamp5 - timestamp4,
+            "timewarping": timestamp6 - timestamp5,
+            "total": timestamp6 - timestamp1,
+        }
+        return pitch_similarity, significant_note_similarity, execution_times
 
 
 if __name__ == "__main__":

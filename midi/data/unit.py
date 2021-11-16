@@ -132,6 +132,16 @@ class MIDIUnitSequenceList(list):
         sequences = [sequence.__str__() for sequence in self]
         return "[" + ", ".join(sequences) + "]"
 
+    def __getitem__(self, val):
+        if isinstance(val, slice):
+            lst = super(MIDIUnitSequenceList, self).__getitem__(val)
+            rtn = MIDIUnitSequenceList()
+            for e in lst:
+                rtn.append(e)
+            return rtn
+        else:
+            return super(MIDIUnitSequenceList, self).__getitem__(val)
+
     def to_pitch_histogram(self, normalize: bool = True) -> np.ndarray:
         histogram = np.zeros([NUM_PITCH_CLASSES], dtype=np.float32)
         for midi_unit_sequence in self:

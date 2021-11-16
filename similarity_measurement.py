@@ -9,16 +9,17 @@ import numpy as np
 import pathlib
 import similarity
 import tqdm
+import warnings
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("dataset_root", None, "", required=True)
 flags.DEFINE_string("save_root", None, "", required=True)
 flags.DEFINE_float("slice_duration", 5.0, "", lower_bound=1.0)
 flags.DEFINE_float("expansion_rate", 1.5, "", lower_bound=1.0)
+flags.DEFINE_integer("num_samples", 100, "", lower_bound=1)
 flags.DEFINE_integer("frame_per_second", 20, "", lower_bound=20)
 flags.DEFINE_integer("settling_frame", 10, "", lower_bound=1)
 flags.DEFINE_integer("compensation_frame", 0, "", lower_bound=0)
-flags.DEFINE_integer("num_samples", 100, "", lower_bound=1)
 flags.DEFINE_integer("queue_size", 8, "", lower_bound=8)
 
 _CSV_HEADER = ["Euclidean Similarity", "Timewarping Similarity", "Length ratio"]
@@ -35,7 +36,7 @@ def main(_):
     elif not save_root.is_dir():
         raise FileExistsError(save_root)
 
-    npz_root = save_root / "npy"
+    npz_root = save_root / "npz"
     if not npz_root.exists():
         npz_root.mkdir(parents=True, exist_ok=True)
     elif not npz_root.is_dir():
@@ -96,7 +97,9 @@ def main(_):
 
             np.savez(
                 npz_root / f"pos_{sample_idx}.npz",
-                data={"score": score, "perf": perf, "alignment": (head, tail)},
+                score=score,
+                perf=perf,
+                alignment=(head, tail),
             )
 
             if isinstance(prev_perfs[0], np.ndarray):
@@ -127,7 +130,8 @@ def main(_):
 
                 np.savez(
                     npz_root / f"neg_{sample_idx-queue_size}.npz",
-                    data={"score": score, "perf": prev_perf,},
+                    score=score,
+                    perf=prev_perf,
                 )
 
             prev_perfs.pop(0)
@@ -135,4 +139,5 @@ def main(_):
 
 
 if __name__ == "__main__":
+    warnings.filterwarnings("ignore", category=UserWarning)
     app.run(main)

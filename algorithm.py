@@ -2,7 +2,8 @@
 
 import midi
 import numpy as np
-from typing import Callable, Tuple
+import scipy.signal as signal
+from typing import Callable, List, Tuple
 
 __all__ = ["euclidean", "levenshtein", "dtw"]
 
@@ -22,9 +23,13 @@ def levenshtein(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
     cost_metric: CostMetric = compare_cost_fn,
+    stabilize: bool = True,
 ) -> float:
-    assert isinstance(source_sequence, midi.MIDIUnitSequence)
-    assert isinstance(target_sequence, midi.MIDIUnitSequence)
+    if not isinstance(source_sequence, midi.MIDIUnitSequence):
+        raise TypeError(type(source_sequence))
+    if not isinstance(target_sequence, midi.MIDIUnitSequence):
+        raise TypeError(type(target_sequence))
+
     source_len, target_len = len(source_sequence), len(target_sequence)
     accumulated_cost_matrix = np.zeros([source_len, target_len], dtype=np.float32)
 
@@ -45,19 +50,24 @@ def levenshtein(
                     ]
                 )
 
-    return (
-        accumulated_cost_matrix[source_len - 1, target_len - 1]
-        / (source_len * target_len) ** 0.5
-    )
+    cost = accumulated_cost_matrix[source_len - 1, target_len - 1]
+    if stabilize:
+        cost / (source_len * target_len + 1e-7) ** 0.5
+
+    return cost
 
 
 def dtw(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
     cost_metric: CostMetric = compare_cost_fn,
+    stabilize: bool = True,
 ) -> float:
-    assert isinstance(source_sequence, midi.MIDIUnitSequence)
-    assert isinstance(target_sequence, midi.MIDIUnitSequence)
+    if not isinstance(source_sequence, midi.MIDIUnitSequence):
+        raise TypeError(type(source_sequence))
+    if not isinstance(target_sequence, midi.MIDIUnitSequence):
+        raise TypeError(type(target_sequence))
+
     source_len, target_len = len(source_sequence), len(target_sequence)
     accumulated_cost_matrix = np.zeros([source_len, target_len], dtype=np.float32)
 
@@ -79,20 +89,29 @@ def dtw(
                 )
             accumulated_cost_matrix[i, j] = cost_metric(s, t) + cost
 
-    return (
-        accumulated_cost_matrix[source_len - 1, target_len - 1]
-        / (source_len * target_len) ** 0.5
-    )
+    cost = accumulated_cost_matrix[source_len - 1, target_len - 1]
+    if stabilize:
+        cost / (source_len * target_len + 1e-7) ** 0.5
+
+    return cost
 
 
 def subsequence_matching(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
     cost_metric: CostMetric = compare_cost_fn,
-) -> Tuple[float, Tuple[int, int]]:
+    stabilize: bool = True,
+) -> Tuple[
+    float, Tuple[int, int], Tuple[List[Tuple[int, int]], np.ndarray, np.ndarray]
+]:
+    if not isinstance(source_sequence, midi.MIDIUnitSequence):
+        raise TypeError(type(source_sequence))
+    if not isinstance(target_sequence, midi.MIDIUnitSequence):
+        raise TypeError(type(target_sequence))
+
+    # Make accumulated cost matrix
     source_len, target_len = len(source_sequence), len(target_sequence)
     accumulated_cost_matrix = np.zeros([source_len, target_len], dtype=np.float32)
-
     for i, s in enumerate(source_sequence):
         for j, t in enumerate(target_sequence):
             if i == 0:
@@ -109,29 +128,44 @@ def subsequence_matching(
                 )
             accumulated_cost_matrix[i, j] = cost_metric(s, t) + accumulated_cost
 
-    deltas = accumulated_cost_matrix[source_len - 1, :]
-    tail = np.argmin(deltas)
-    cost = deltas[tail]
+    # Find tail index of objective subsequence from delta functions
+    delta_functions = accumulated_cost_matrix[source_len - 1, :]
+    reversed_delta = delta_functions[::-1]
+    tail = target_len - np.argmin(reversed_delta) - 1
+    cost = delta_functions[tail]
+
+    # Find head index of objective subsequence by using back tracking
     head = 0
     i, j = source_len - 1, tail
+    optimal_warping_path: List[Tuple[int, int]] = []
     while i >= 0 and j >= 0:
+        optimal_warping_path.append((i, j))
         if i == 0:
             head = j
             break
         elif j == 0:
             i -= 1
         else:
-            horizontal_cost = accumulated_cost_matrix[i][j - 1]
-            diagonal_cost = accumulated_cost_matrix[i - 1][j - 1]
-            vertical_cost = accumulated_cost_matrix[i - 1][j]
-            if horizontal_cost < diagonal_cost:
-                if horizontal_cost < vertical_cost:
+            cost_v = accumulated_cost_matrix[i - 1][j]
+            cost_h = accumulated_cost_matrix[i][j - 1]
+            cost_d = accumulated_cost_matrix[i - 1][j - 1]
+            if cost_h < cost_d:
+                if cost_h < cost_v:
                     j -= 1
                 else:
                     i -= 1
             else:
                 i -= 1
-                if diagonal_cost <= vertical_cost:
+                if cost_d <= cost_v:
                     j -= 1
+    optimal_warping_path[::-1]  # monotonically increasing
 
-    return cost, (head, tail), accumulated_cost_matrix, deltas
+    if stabilize:
+        subsequence_len = tail - head
+        cost = cost / (source_len * subsequence_len + 1e-7) ** 0.5
+
+    return (
+        cost,
+        (head, tail),
+        (optimal_warping_path, accumulated_cost_matrix, delta_functions),
+    )

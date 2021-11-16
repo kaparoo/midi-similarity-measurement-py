@@ -86,26 +86,26 @@ def score_similarity(
     if check_execution_times:
         timestamp2 = time.time()
 
-    source_histogram = source.to_pitch_histogram()
-    target_histogram = target.to_pitch_histogram()
-
-    if check_execution_times:
-        timestamp3 = time.time()
-
     source_sequence = source.to_representative_unit_sequence(compensation_frame)
     target_sequence = target.to_representative_unit_sequence(compensation_frame)
 
     if check_execution_times:
+        timestamp3 = time.time()
+
+    timewarping_similarity, (head, tail), _ = algorithm.subsequence_matching(
+        source_sequence, target_sequence, cost_metric, stabilize=True
+    )
+
+    if check_execution_times:
         timestamp4 = time.time()
 
-    euclidean_similarity = algorithm.euclidean(source_histogram, target_histogram)
+    source_histogram = source.to_pitch_histogram()
+    target_histogram = target[head : tail + 1].to_pitch_histogram()
 
     if check_execution_times:
         timestamp5 = time.time()
 
-    timewarping_similarity = algorithm.levenshtein(
-        source_sequence, target_sequence, cost_metric,
-    )
+    euclidean_similarity = algorithm.euclidean(source_histogram, target_histogram)
 
     if check_execution_times:
         timestamp6 = time.time()
@@ -115,10 +115,10 @@ def score_similarity(
     else:
         execution_times = {
             "from_midi_matrix": timestamp2 - timestamp1,
-            "to_pitch_histogram": timestamp3 - timestamp2,
-            "to_representative_unit_sequence": timestamp4 - timestamp3,
-            "euclidean": timestamp5 - timestamp4,
-            "timewarping": timestamp6 - timestamp5,
+            "to_representative_unit_sequence": timestamp3 - timestamp2,
+            "timewarping": timestamp4 - timestamp3,
+            "to_pitch_histogram": timestamp5 - timestamp4,
+            "euclidean": timestamp6 - timestamp5,
             "total": timestamp6 - timestamp1,
         }
 

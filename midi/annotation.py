@@ -31,7 +31,7 @@ class Annotation(object):
         return len(self.onsets)
 
 
-class AnnotationIterator:
+class AnnotationIterator(object):
     def __init__(self, annotation: Annotation):
         self.annotation = annotation
         self.idx = 0

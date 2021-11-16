@@ -1,28 +1,27 @@
 # -*- coding: utf-* -*-
 
-import function
 import midi
 import numpy as np
-from typing import Tuple
+from typing import Callable, Tuple
 
 __all__ = ["euclidean", "levenshtein", "dtw"]
 
 
 def euclidean(source_histogram: np.ndarray, target_histogram: np.ndarray) -> float:
-    # TODO(kaparoo): Rewrite assertions shortly
-    assert isinstance(source_histogram, np.ndarray)
-    assert len(source_histogram) == midi.NUM_PITCH_CLASSES
-    assert len(source_histogram.shape) == 1
-    assert isinstance(target_histogram, np.ndarray)
-    assert len(target_histogram) == midi.NUM_PITCH_CLASSES
-    assert len(target_histogram.shape) == 1
-    return np.sum((source_histogram - target_histogram) ** 2) ** 0.5
+    return np.sqrt(np.sum((source_histogram - target_histogram) ** 2))
+
+
+CostMetric = Callable[[midi.MIDIUnit, midi.MIDIUnit], float]
+
+
+def compare_cost_fn(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
+    return float(s.get_midi_key() != t.get_midi_key())
 
 
 def levenshtein(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
-    cost_metric: function.CostMetric = function.compare_cost_fn,
+    cost_metric: CostMetric = compare_cost_fn,
 ) -> float:
     assert isinstance(source_sequence, midi.MIDIUnitSequence)
     assert isinstance(target_sequence, midi.MIDIUnitSequence)
@@ -55,7 +54,7 @@ def levenshtein(
 def dtw(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
-    cost_metric: function.CostMetric = function.compare_cost_fn,
+    cost_metric: CostMetric = compare_cost_fn,
 ) -> float:
     assert isinstance(source_sequence, midi.MIDIUnitSequence)
     assert isinstance(target_sequence, midi.MIDIUnitSequence)
@@ -89,7 +88,7 @@ def dtw(
 def subsequence_matching(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
-    cost_metric: function.CostMetric = function.compare_cost_fn,
+    cost_metric: CostMetric = compare_cost_fn,
 ) -> Tuple[float, Tuple[int, int]]:
     source_len, target_len = len(source_sequence), len(target_sequence)
     accumulated_cost_matrix = np.zeros([source_len, target_len], dtype=np.float32)
@@ -111,13 +110,6 @@ def subsequence_matching(
             accumulated_cost_matrix[i, j] = cost_metric(s, t) + accumulated_cost
 
     deltas = accumulated_cost_matrix[source_len - 1, :]
-    # tail = target_len - 1
-    # cost = deltas[tail]
-    # # idx = tail
-    # while idx >= 0:
-    #     if deltas[idx] < cost:
-    #         tail = idx
-    #         cost = deltas[idx]
     tail = np.argmin(deltas)
     cost = deltas[tail]
     head = 0

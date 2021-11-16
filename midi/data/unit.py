@@ -4,11 +4,11 @@
 import enum
 import numbers
 import numpy as np
-from typing import Callable, Tuple, Union
+from typing import List, Tuple, Union
 
 from .constant import MAX_MIDI_KEY, MIN_MIDI_KEY, NUM_MIDI_KEYS, NUM_PITCH_CLASSES
 
-__all__ = ["MIDIUnit"]
+__all__ = ["MIDIUnit", "MIDIUnitSequence", "MIDIUnitSequenceList"]
 
 
 class _Type(enum.Enum):
@@ -26,7 +26,7 @@ class MIDIUnit(object):
         if not isinstance(velocity, numbers.Real):
             raise TypeError(type(velocity))
 
-        if MAX_MIDI_KEY >= midi_key >= MIN_MIDI_KEY and velocity >= 0.0:
+        if MAX_MIDI_KEY >= midi_key >= MIN_MIDI_KEY and velocity > 0:
             self._type = _Type.Note
             self._midi_key = int(midi_key)
             self._velocity = float(velocity)
@@ -59,9 +59,9 @@ class MIDIUnit(object):
         else:
             return "Rest"
 
-    @classmethod
-    def new_rest(cls):
-        cls.__init__(MAX_MIDI_KEY + 1, 0)
+    @staticmethod
+    def new_rest():
+        return MIDIUnit(MAX_MIDI_KEY + 1, 0.0)
 
 
 class MIDIUnitSequence(list):
@@ -89,36 +89,33 @@ class MIDIUnitSequenceList(list):
 
     @staticmethod
     def from_midi_matrix(
-        midi_matrix: np.ndarray,
-        onset_weight: float = 10.0,
-        decay_fn: Callable[[float], float] = lambda x: 1,
+        midi_matrix: np.ndarray, settling_frame: int,
     ):
-        # assert isinstance(midi_matrix, np.ndarray)
-        # assert len(midi_matrix) == NUM_MIDI_KEYS
-        # assert len(midi_matrix.shape) <= 2
-        # assert isinstance(onset_weight, (int, float)) and onset_weight > 0
-
-        midi_unit_sequence_list = MIDIUnitSequenceList()
+        prev_pressed: List[bool] = [False] * NUM_MIDI_KEYS
         midi_matrix = np.reshape(midi_matrix, [NUM_MIDI_KEYS, -1]).T
+        midi_unit_sequence_list = MIDIUnitSequenceList()
         for frame_idx in range(len(midi_matrix)):
             midi_unit_sequence = MIDIUnitSequence()
             for midi_key in range(NUM_MIDI_KEYS):
+                velocity = 0
                 if midi_matrix[frame_idx, midi_key] <= 0:
-                    continue
+                    prev_pressed[midi_key] = False
                 elif frame_idx > 0:
                     prev_velocity = midi_matrix[frame_idx - 1, midi_key]
                     if prev_velocity > 0:
-                        velocity = decay_fn(prev_velocity)
-                    else:
-                        velocity = onset_weight
+                        velocity = prev_velocity - 1
+                    elif not prev_pressed[midi_key]:
+                        velocity = settling_frame - 1
+                    prev_pressed[midi_key] = True
                 else:
-                    velocity = onset_weight
+                    velocity = settling_frame - 1
+                    prev_pressed[midi_key] = True
                 midi_matrix[frame_idx, midi_key] = velocity
-                midi_unit_sequence.append(MIDIUnit(midi_key, velocity))
+                if velocity > 0:
+                    midi_unit_sequence.append(MIDIUnit(midi_key, velocity))
             if len(midi_unit_sequence) == 0:
-                midi_unit_sequence.append(MIDIUnit(MAX_MIDI_KEY + 1, 0))
+                midi_unit_sequence.append(MIDIUnit.new_rest())
             midi_unit_sequence_list.append(midi_unit_sequence)
-
         return midi_unit_sequence_list
 
     def append(self, sequence: MIDIUnitSequence) -> None:
@@ -146,13 +143,18 @@ class MIDIUnitSequenceList(list):
             histogram /= np.sum(histogram + 1e-7)
         return histogram
 
-    def to_significant_unit_sequence(
-        self, unit_metric: Callable[[MIDIUnitSequence], MIDIUnit] = lambda x: x[-1]
+    def to_representative_unit_sequence(
+        self, compensation_frame: int = 0
     ) -> MIDIUnitSequence:
         sequence = MIDIUnitSequence()
         for midi_unit_sequence in self:
-            significant_unit = unit_metric(midi_unit_sequence)
-            sequence.append(significant_unit)
+            representative_unit = midi_unit_sequence[0]
+            for midi_unit in midi_unit_sequence[1:]:
+                if representative_unit.get_velocity() <= (
+                    compensation_frame + midi_unit.get_velocity()
+                ):
+                    representative_unit = midi_unit
+            sequence.append(representative_unit)
         if not sequence:
             sequence.append(MIDIUnit.new_rest())
         return sequence

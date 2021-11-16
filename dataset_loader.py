@@ -8,7 +8,7 @@ import pathlib
 import random
 from typing import Any, Generator, List, Tuple, Union
 
-from midi import Annotation, MidiParser
+from midi import Annotation, MIDIParser
 
 __all__ = ["spawn"]
 
@@ -82,7 +82,7 @@ def spawn(
     )
     _debug_log(dataset_root, slice_duration, expansion_rate, frame_per_second)
 
-    midi_parser = MidiParser(show=False)
+    midi_parser = MIDIParser(show=False)
 
     # TODO(kaparoo): Replace logic to use methods of pathlib.Path (e.g. iterdir, glob)
     dataset_infos: List[Tuple[pathlib.Path, List[str]]] = []

@@ -42,9 +42,9 @@ def main(_):
     elif not npz_root.is_dir():
         raise FileExistsError(npz_root)
 
-    with open(save_root / "pos.csv", "w", encoding="utf8") as pos_csv, open(
-        save_root / "neg.csv", "w", encoding="utf8"
-    ) as neg_csv:
+    with open(save_root / "config.txt", "w", encoding="utf8") as config, open(
+        save_root / "pos.csv", "w", encoding="utf8"
+    ) as pos_csv, open(save_root / "neg.csv", "w", encoding="utf8") as neg_csv:
         pos_csvfile = csv.writer(pos_csv, delimiter=",", quotechar="|")
         pos_csvfile.writerow(_CSV_HEADER)
         neg_csvfile = csv.writer(neg_csv, delimiter=",", quotechar="|")
@@ -52,22 +52,38 @@ def main(_):
 
         settling_frame = FLAGS.settling_frame
         compensation_frame = FLAGS.compensation_frame
+        slice_duration = FLAGS.slice_duration
+        expansion_rate = FLAGS.expansion_rate
+        frame_per_second = FLAGS.frame_per_second
+        queue_size = FLAGS.queue_size
+        num_samples = FLAGS.num_samples
+
+        config.writelines(
+            [
+                f"dataset_root: {str(dataset_root)}\n",
+                f"num_samples: {num_samples}\n"
+                f"frame_per_second: {frame_per_second}(Hz)\n",
+                f"slice_duration: {slice_duration}(sec)\n",
+                f"expansion_rate: {expansion_rate}\n",
+                f"settling_frame: {settling_frame}\n",
+                f"compensation_frame: {compensation_frame}\n",
+            ]
+        )
 
         dataset = dataset_loader.spawn(
             dataset_root=dataset_root,
-            slice_duration=FLAGS.slice_duration,
-            expansion_rate=FLAGS.expansion_rate,
-            frame_per_second=FLAGS.frame_per_second,
+            slice_duration=slice_duration,
+            expansion_rate=expansion_rate,
+            frame_per_second=frame_per_second,
             shuffle=True,
         )
 
         pos_similarities = []
         neg_similarities = []
 
-        queue_size = FLAGS.queue_size
         prev_perfs = [None] * queue_size
 
-        for sample_idx in tqdm.tqdm(range(FLAGS.num_samples)):
+        for sample_idx in tqdm.tqdm(range(num_samples)):
             score, perf, (head, tail) = next(dataset)
             score_len = score.shape[-1]
             perf_len = perf.shape[-1]

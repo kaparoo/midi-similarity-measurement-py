@@ -35,6 +35,12 @@ def main(_):
     elif not save_root.is_dir():
         raise FileExistsError(save_root)
 
+    npz_root = save_root / "npy"
+    if not npz_root.exists():
+        npz_root.mkdir(parents=True, exist_ok=True)
+    elif not npz_root.is_dir():
+        raise FileExistsError(npz_root)
+
     with open(save_root / "pos.csv", "w", encoding="utf8") as pos_csv, open(
         save_root / "neg.csv", "w", encoding="utf8"
     ) as neg_csv:
@@ -56,10 +62,12 @@ def main(_):
 
         pos_similarities = []
         neg_similarities = []
-        prev_perfs = [None] * FLAGS.queue_size
 
-        for idx in tqdm.tqdm(range(FLAGS.num_samples)):
-            score, perf, _ = next(dataset)
+        queue_size = FLAGS.queue_size
+        prev_perfs = [None] * queue_size
+
+        for sample_idx in tqdm.tqdm(range(FLAGS.num_samples)):
+            score, perf, (head, tail) = next(dataset)
             score_len = score.shape[-1]
             perf_len = perf.shape[-1]
 
@@ -71,6 +79,13 @@ def main(_):
                 score, perf, settling_frame, compensation_frame
             )
             pos_length_ratio = perf_len / (score_len + 1e-7)
+            pos_similarities.append(
+                (
+                    pos_euclidean_similarity,
+                    pos_timewarping_similarity,
+                    pos_length_ratio,
+                )
+            )
             pos_csvfile.writerow(
                 [
                     pos_euclidean_similarity,
@@ -78,12 +93,10 @@ def main(_):
                     pos_length_ratio,
                 ]
             )
-            pos_similarities.append(
-                (
-                    pos_euclidean_similarity,
-                    pos_timewarping_similarity,
-                    pos_length_ratio,
-                )
+
+            np.savez(
+                npz_root / f"pos_{sample_idx}.npz",
+                data={"score": score, "perf": perf, "alignment": (head, tail)},
             )
 
             if isinstance(prev_perfs[0], np.ndarray):
@@ -94,17 +107,9 @@ def main(_):
                     neg_timewarping_similarity,
                     _,
                 ) = similarity.score_similarity(
-                    score, perf, settling_frame, compensation_frame
+                    score, prev_perf, settling_frame, compensation_frame
                 )
                 neg_length_ratio = prev_perf_len / (score_len + 1e-7)
-
-                neg_csvfile.writerow(
-                    [
-                        neg_euclidean_similarity,
-                        neg_timewarping_similarity,
-                        neg_length_ratio,
-                    ]
-                )
                 neg_similarities.append(
                     (
                         neg_euclidean_similarity,
@@ -112,6 +117,19 @@ def main(_):
                         neg_length_ratio,
                     )
                 )
+                neg_csvfile.writerow(
+                    [
+                        neg_euclidean_similarity,
+                        neg_timewarping_similarity,
+                        neg_length_ratio,
+                    ]
+                )
+
+                np.savez(
+                    npz_root / f"neg_{sample_idx-queue_size}.npz",
+                    data={"score": score, "perf": prev_perf,},
+                )
+
             prev_perfs.pop(0)
             prev_perfs.append(perf)
 

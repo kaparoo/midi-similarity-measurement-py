@@ -193,7 +193,7 @@ def spawn(
                             f"sliced_perf_midi_matrix.shape: {sliced_perf_midi_matrix.shape}"
                         )
 
-                        yield sliced_score_midi_matrix, sliced_perf_midi_matrix, (
+                        yield sliced_score_midi_matrix.copy(), sliced_perf_midi_matrix.copy(), (
                             perf_matrix_head - expanded_perf_matrix_head,
                             perf_matrix_tail - expanded_perf_matrix_head,
                         )

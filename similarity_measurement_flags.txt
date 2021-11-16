@@ -1,0 +1,7 @@
+slice_duration=5.0
+expansion_rate=1.5
+frame_per_second=20
+settling_frame=8
+compensation_frame=0
+num_samples=100
+queue_size=8

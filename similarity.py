@@ -98,12 +98,12 @@ def score_similarity(
     if check_execution_times:
         timestamp4 = time.time()
 
-    pitch_similarity = algorithm.euclidean(source_histogram, target_histogram)
+    euclidean_similarity = algorithm.euclidean(source_histogram, target_histogram)
 
     if check_execution_times:
         timestamp5 = time.time()
 
-    significant_note_similarity = algorithm.levenshtein(
+    timewarping_similarity = algorithm.levenshtein(
         source_sequence, target_sequence, cost_metric,
     )
 
@@ -111,14 +111,19 @@ def score_similarity(
         timestamp6 = time.time()
 
     if not check_execution_times:
-        return pitch_similarity, significant_note_similarity, {}
+        execution_times = {}
     else:
         execution_times = {
             "from_midi_matrix": timestamp2 - timestamp1,
             "to_pitch_histogram": timestamp3 - timestamp2,
-            "to_significant_unit_sequence": timestamp4 - timestamp3,
+            "to_representative_unit_sequence": timestamp4 - timestamp3,
             "euclidean": timestamp5 - timestamp4,
             "timewarping": timestamp6 - timestamp5,
             "total": timestamp6 - timestamp1,
         }
-        return pitch_similarity, significant_note_similarity, execution_times
+
+    return (
+        euclidean_similarity,
+        timewarping_similarity,
+        execution_times,
+    )

@@ -92,7 +92,7 @@ def main(_):
                 pos_euclidean_similarity,
                 pos_timewarping_similarity,
                 _,
-            ) = similarity.score_similarity(
+            ) = similarity.measure(
                 score, perf, settling_frame, compensation_frame
             )
             pos_length_ratio = perf_len / (score_len + 1e-7)
@@ -125,7 +125,7 @@ def main(_):
                     neg_euclidean_similarity,
                     neg_timewarping_similarity,
                     _,
-                ) = similarity.score_similarity(
+                ) = similarity.measure(
                     score, prev_perf, settling_frame, compensation_frame
                 )
                 neg_length_ratio = prev_perf_len / (score_len + 1e-7)

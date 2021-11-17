@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import algorithm
 import midi
 import numbers
 import numpy as np
 import time
 from typing import Dict, Tuple
-
+from . import algorithm
 
 # TODO(kaparoo): Rewrite error messages more properly
 def _verify_arguments(
@@ -55,7 +54,7 @@ def _verify_arguments(
     return source_midi_matrix, target_midi_matrix, settling_frame, compensation_frame
 
 
-def score_similarity(
+def measure(
     source_midi_matrix: np.ndarray,
     target_midi_matrix: np.ndarray,
     settling_frame: int = 10,

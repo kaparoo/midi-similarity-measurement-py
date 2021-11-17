@@ -59,6 +59,7 @@ def score(
     target_midi_matrix: np.ndarray,
     settling_frame: int = 10,
     compensation_frame: int = 0,
+    use_subsequence_dtw: bool = True,
     cost_metric: algorithm.CostMetric = algorithm.compare_cost_fn,
     return_execution_times: bool = False,
 ) -> Tuple[float, float, Dict[str, float]]:
@@ -91,15 +92,24 @@ def score(
     if return_execution_times:
         timestamp3 = time.time()
 
-    timewarping_similarity, (head, tail), _ = algorithm.subsequence_matching(
-        source_sequence, target_sequence, cost_metric, stabilize=True
-    )
+    if use_subsequence_dtw:        
+        timewarping_similarity, (head, tail), _ = algorithm.subsequence_matching(
+            source_sequence, target_sequence, cost_metric, stabilize=True
+        )
+        if return_execution_times:
+            timestamp4 = time.time()
 
-    if return_execution_times:
-        timestamp4 = time.time()
-
-    source_histogram = source.to_pitch_histogram()
-    target_histogram = target[head : tail + 1].to_pitch_histogram()
+        source_histogram = source.to_pitch_histogram()
+        target_histogram = target[head : tail + 1].to_pitch_histogram()
+    else:
+        timewarping_similarity = algorithm.levenshtein(
+            source_sequence, target_sequence, cost_metric, stabilize=True
+        )
+        if return_execution_times:
+            timestamp4 = time.time()
+        
+        source_histogram = source.to_pitch_histogram()
+        target_histogram = target.to_pitch_histogram()
 
     if return_execution_times:
         timestamp5 = time.time()

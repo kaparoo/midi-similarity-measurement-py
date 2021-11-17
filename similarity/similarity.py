@@ -59,8 +59,8 @@ def score(
     target_midi_matrix: np.ndarray,
     settling_frame: int = 10,
     compensation_frame: int = 0,
-    use_decay_for_histogram: bool = True,
     use_subsequence_dtw: bool = True,
+    use_decay_for_histogram: bool = True,
     cost_metric: algorithm.CostMetric = algorithm.compare_cost_fn,
     return_execution_times: bool = False,
 ) -> Tuple[float, float, Dict[str, float]]:

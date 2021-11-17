@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from .similarity import measure
+from .similarity import score
 
-__all__ = ["measure"]
+__all__ = ["score"]

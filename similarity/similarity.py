@@ -54,13 +54,13 @@ def _verify_arguments(
     return source_midi_matrix, target_midi_matrix, settling_frame, compensation_frame
 
 
-def measure(
+def score(
     source_midi_matrix: np.ndarray,
     target_midi_matrix: np.ndarray,
     settling_frame: int = 10,
     compensation_frame: int = 0,
     cost_metric: algorithm.CostMetric = algorithm.compare_cost_fn,
-    check_execution_times: bool = False,
+    return_execution_times: bool = False,
 ) -> Tuple[float, float, Dict[str, float]]:
 
     (
@@ -72,7 +72,7 @@ def measure(
         source_midi_matrix, target_midi_matrix, settling_frame, compensation_frame
     )
 
-    if check_execution_times:
+    if return_execution_times:
         timestamp1 = time.time()
 
     source = midi.MIDIUnitSequenceList.from_midi_matrix(
@@ -82,34 +82,34 @@ def measure(
         target_midi_matrix, settling_frame
     )
 
-    if check_execution_times:
+    if return_execution_times:
         timestamp2 = time.time()
 
     source_sequence = source.to_representative_unit_sequence(compensation_frame)
     target_sequence = target.to_representative_unit_sequence(compensation_frame)
 
-    if check_execution_times:
+    if return_execution_times:
         timestamp3 = time.time()
 
     timewarping_similarity, (head, tail), _ = algorithm.subsequence_matching(
         source_sequence, target_sequence, cost_metric, stabilize=True
     )
 
-    if check_execution_times:
+    if return_execution_times:
         timestamp4 = time.time()
 
     source_histogram = source.to_pitch_histogram()
     target_histogram = target[head : tail + 1].to_pitch_histogram()
 
-    if check_execution_times:
+    if return_execution_times:
         timestamp5 = time.time()
 
     euclidean_similarity = algorithm.euclidean(source_histogram, target_histogram)
 
-    if check_execution_times:
+    if return_execution_times:
         timestamp6 = time.time()
 
-    if not check_execution_times:
+    if not return_execution_times:
         execution_times = {}
     else:
         execution_times = {

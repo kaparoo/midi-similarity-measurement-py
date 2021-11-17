@@ -9,6 +9,7 @@ import numpy as np
 import pathlib
 import similarity
 import tqdm
+from typing import List, Tuple
 import warnings
 
 FLAGS = flags.FLAGS
@@ -78,10 +79,10 @@ def main(_):
             shuffle=True,
         )
 
-        pos_similarities = []
-        neg_similarities = []
+        pos_similarities: List[Tuple[float, float, float]] = []
+        neg_similarities: List[Tuple[float, float, float]] = []
 
-        prev_perfs = [None] * queue_size
+        prev_perfs: List[np.ndarray] = [None] * queue_size
 
         for sample_idx in tqdm.tqdm(range(num_samples)):
             score, perf, (head, tail) = next(dataset)
@@ -92,9 +93,7 @@ def main(_):
                 pos_euclidean_similarity,
                 pos_timewarping_similarity,
                 _,
-            ) = similarity.measure(
-                score, perf, settling_frame, compensation_frame
-            )
+            ) = similarity.score(score, perf, settling_frame, compensation_frame)
             pos_length_ratio = perf_len / (score_len + 1e-7)
             pos_similarities.append(
                 (
@@ -125,7 +124,7 @@ def main(_):
                     neg_euclidean_similarity,
                     neg_timewarping_similarity,
                     _,
-                ) = similarity.measure(
+                ) = similarity.score(
                     score, prev_perf, settling_frame, compensation_frame
                 )
                 neg_length_ratio = prev_perf_len / (score_len + 1e-7)

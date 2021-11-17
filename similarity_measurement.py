@@ -23,8 +23,9 @@ flags.DEFINE_integer("settling_frame", 10, "", lower_bound=1)
 flags.DEFINE_integer("compensation_frame", 0, "", lower_bound=0)
 flags.DEFINE_integer("queue_size", 8, "", lower_bound=8)
 flags.DEFINE_bool("use_subsequence_dtw", True, "")
+flags.DEFINE_bool("use_decay_for_histogram", True, "")
 
-_CSV_HEADER = ["Euclidean Similarity", "Timewarping Similarity", "Length ratio"]
+_CSV_HEADER = ["Histogram distance", "Timewarping distance", "Length ratio"]
 
 
 def main(_):
@@ -60,6 +61,7 @@ def main(_):
         queue_size = FLAGS.queue_size
         num_samples = FLAGS.num_samples
         use_subsequence_dtw = FLAGS.use_subsequence_dtw
+        use_decay_for_histogram = FLAGS.use_decay_for_histogram
 
         config.writelines(
             [
@@ -70,7 +72,8 @@ def main(_):
                 f"expansion_rate: {expansion_rate}\n",
                 f"settling_frame: {settling_frame}\n",
                 f"compensation_frame: {compensation_frame}\n",
-                f"use_subsequence_dtw: {use_subsequence_dtw}",
+                f"use_subsequence_dtw: {use_subsequence_dtw}\n",
+                f"use_decay_for_histogram: {use_decay_for_histogram}\n",
             ]
         )
 
@@ -92,27 +95,20 @@ def main(_):
             score_len = score.shape[-1]
             perf_len = perf.shape[-1]
 
-            (
-                pos_euclidean_similarity,
-                pos_timewarping_similarity,
-                _,
-            ) = similarity.score(
-                score, perf, settling_frame, compensation_frame, use_subsequence_dtw,
+            (pos_histogram_distance, pos_timewarping_distance, _,) = similarity.score(
+                score,
+                perf,
+                settling_frame,
+                compensation_frame,
+                use_subsequence_dtw,
+                use_decay_for_histogram,
             )
             pos_length_ratio = perf_len / (score_len + 1e-7)
             pos_similarities.append(
-                (
-                    pos_euclidean_similarity,
-                    pos_timewarping_similarity,
-                    pos_length_ratio,
-                )
+                (pos_histogram_distance, pos_timewarping_distance, pos_length_ratio,)
             )
             pos_csvfile.writerow(
-                [
-                    pos_euclidean_similarity,
-                    pos_timewarping_similarity,
-                    pos_length_ratio,
-                ]
+                [pos_histogram_distance, pos_timewarping_distance, pos_length_ratio,]
             )
 
             np.savez(
@@ -126,8 +122,8 @@ def main(_):
                 prev_perf = prev_perfs[0]
                 prev_perf_len = prev_perf.shape[-1]
                 (
-                    neg_euclidean_similarity,
-                    neg_timewarping_similarity,
+                    neg_histogram_distance,
+                    neg_timewarping_distance,
                     _,
                 ) = similarity.score(
                     score,
@@ -135,19 +131,20 @@ def main(_):
                     settling_frame,
                     compensation_frame,
                     use_subsequence_dtw,
+                    use_decay_for_histogram,
                 )
                 neg_length_ratio = prev_perf_len / (score_len + 1e-7)
                 neg_similarities.append(
                     (
-                        neg_euclidean_similarity,
-                        neg_timewarping_similarity,
+                        neg_histogram_distance,
+                        neg_timewarping_distance,
                         neg_length_ratio,
                     )
                 )
                 neg_csvfile.writerow(
                     [
-                        neg_euclidean_similarity,
-                        neg_timewarping_similarity,
+                        neg_histogram_distance,
+                        neg_timewarping_distance,
                         neg_length_ratio,
                     ]
                 )

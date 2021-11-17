@@ -86,14 +86,19 @@ class MIDIUnitSequence(list):
 class MIDIUnitSequenceList(list):
     def __init__(self, *args) -> None:
         super(MIDIUnitSequenceList, self).__init__()
+        self._midi_matrix = None
+
+    def set_midi_matrix(self, midi_matrix: np.ndarray):
+        self._midi_matrix = midi_matrix.copy()
 
     @staticmethod
     def from_midi_matrix(
         midi_matrix: np.ndarray, settling_frame: int,
     ):
         prev_pressed: List[bool] = [False] * NUM_MIDI_KEYS
-        midi_matrix = np.reshape(midi_matrix, [NUM_MIDI_KEYS, -1]).T
+        midi_matrix = np.reshape(midi_matrix.copy(), [NUM_MIDI_KEYS, -1]).T
         midi_unit_sequence_list = MIDIUnitSequenceList()
+        midi_unit_sequence_list.set_midi_matrix(midi_matrix)
         for frame_idx in range(len(midi_matrix)):
             midi_unit_sequence = MIDIUnitSequence()
             for midi_key in range(NUM_MIDI_KEYS):
@@ -142,13 +147,24 @@ class MIDIUnitSequenceList(list):
         else:
             return super(MIDIUnitSequenceList, self).__getitem__(val)
 
-    def to_pitch_histogram(self, normalize: bool = True) -> np.ndarray:
+    def to_pitch_histogram(
+        self, normalize: bool = True, with_decay: bool = True
+    ) -> np.ndarray:
         histogram = np.zeros([NUM_PITCH_CLASSES], dtype=np.float32)
-        for midi_unit_sequence in self:
-            for midi_unit in midi_unit_sequence:
-                if midi_unit.is_note():
-                    midi_key, velocity = midi_unit.get_values()
-                    histogram[midi_key % NUM_PITCH_CLASSES] += velocity
+        if with_decay:
+            for midi_unit_sequence in self:
+                for midi_unit in midi_unit_sequence:
+                    if midi_unit.is_note():
+                        midi_key, velocity = midi_unit.get_values()
+                        histogram[midi_key % NUM_PITCH_CLASSES] += velocity
+        else:
+            if not isinstance(self._midi_matrix, np.ndarray):
+                raise TypeError(type(self._midi_matrix))
+            for frame_idx in range(len(self._midi_matrix)):
+                for midi_key in range(NUM_MIDI_KEYS):
+                    if self._midi_matrix[frame_idx, midi_key] > 0:
+                        pitch = midi_key % NUM_PITCH_CLASSES
+                        histogram[pitch] += 1.0
         if normalize:
             histogram /= np.sum(histogram + 1e-7)
         return histogram

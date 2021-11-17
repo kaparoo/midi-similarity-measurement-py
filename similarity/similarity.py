@@ -60,6 +60,7 @@ def score(
     settling_frame: int = 10,
     compensation_frame: int = 0,
     use_subsequence_dtw: bool = True,
+    use_decay_for_histogram: bool = True,
     cost_metric: algorithm.CostMetric = algorithm.compare_cost_fn,
     return_execution_times: bool = False,
 ) -> Tuple[float, float, Dict[str, float]]:
@@ -99,8 +100,17 @@ def score(
         if return_execution_times:
             timestamp4 = time.time()
 
-        source_histogram = source.to_pitch_histogram()
-        target_histogram = target[head : tail + 1].to_pitch_histogram()
+        if use_decay_for_histogram:
+            source_histogram = source.to_pitch_histogram(with_decay=True)
+            target_histogram = target[head : tail + 1].to_pitch_histogram(
+                with_decay=True
+            )
+        else:
+            source_histogram = source.to_pitch_histogram(with_decay=False)
+            target_histogram = target[head : tail + 1].to_pitch_histogram(
+                with_decay=False
+            )
+
     else:
         timewarping_similarity = algorithm.levenshtein(
             source_sequence, target_sequence, cost_metric, stabilize=True
@@ -108,8 +118,12 @@ def score(
         if return_execution_times:
             timestamp4 = time.time()
 
-        source_histogram = source.to_pitch_histogram()
-        target_histogram = target.to_pitch_histogram()
+        if use_decay_for_histogram:
+            source_histogram = source.to_pitch_histogram(with_decay=True)
+            target_histogram = target.to_pitch_histogram(with_decay=True)
+        else:
+            source_histogram = source.to_pitch_histogram(with_decay=False)
+            target_histogram = target.to_pitch_histogram(with_decay=False)
 
     if return_execution_times:
         timestamp5 = time.time()

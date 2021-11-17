@@ -5,4 +5,5 @@ frame_per_second=20
 settling_frame=10
 compensation_frame=0
 use_subsequence_dtw=True
+use_decay_for_histogram=True
 queue_size=8

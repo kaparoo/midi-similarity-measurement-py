@@ -52,7 +52,7 @@ def levenshtein(
 
     cost = accumulated_cost_matrix[source_len - 1, target_len - 1]
     if stabilize:
-        cost / (source_len * target_len + 1e-7) ** 0.5
+        cost = cost / (source_len * target_len) ** 0.5
 
     return cost
 
@@ -91,7 +91,7 @@ def dtw(
 
     cost = accumulated_cost_matrix[source_len - 1, target_len - 1]
     if stabilize:
-        cost / (source_len * target_len + 1e-7) ** 0.5
+        cost = cost / (source_len * target_len) ** 0.5
 
     return cost
 
@@ -161,8 +161,8 @@ def subsequence_matching(
     optimal_warping_path[::-1]  # monotonically increasing
 
     if stabilize:
-        subsequence_len = tail - head
-        cost = cost / (source_len * subsequence_len + 1e-7) ** 0.5
+        subsequence_len = tail - head + 1e-7
+        cost = cost / (source_len * subsequence_len) ** 0.5
 
     return (
         cost,

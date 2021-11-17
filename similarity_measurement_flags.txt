@@ -4,4 +4,5 @@ num_samples=100
 frame_per_second=20
 settling_frame=10
 compensation_frame=0
+use_subsequence_dtw=True
 queue_size=8

@@ -22,6 +22,7 @@ flags.DEFINE_integer("frame_per_second", 20, "", lower_bound=20)
 flags.DEFINE_integer("settling_frame", 10, "", lower_bound=1)
 flags.DEFINE_integer("compensation_frame", 0, "", lower_bound=0)
 flags.DEFINE_integer("queue_size", 8, "", lower_bound=8)
+flags.DEFINE_bool("use_subsequence_dtw", True, "")
 
 _CSV_HEADER = ["Euclidean Similarity", "Timewarping Similarity", "Length ratio"]
 
@@ -58,6 +59,7 @@ def main(_):
         frame_per_second = FLAGS.frame_per_second
         queue_size = FLAGS.queue_size
         num_samples = FLAGS.num_samples
+        use_subsequence_dtw = FLAGS.use_subsequence_dtw
 
         config.writelines(
             [
@@ -68,6 +70,7 @@ def main(_):
                 f"expansion_rate: {expansion_rate}\n",
                 f"settling_frame: {settling_frame}\n",
                 f"compensation_frame: {compensation_frame}\n",
+                f"use_subsequence_dtw: {use_subsequence_dtw}",
             ]
         )
 
@@ -93,7 +96,9 @@ def main(_):
                 pos_euclidean_similarity,
                 pos_timewarping_similarity,
                 _,
-            ) = similarity.score(score, perf, settling_frame, compensation_frame)
+            ) = similarity.score(
+                score, perf, settling_frame, compensation_frame, use_subsequence_dtw,
+            )
             pos_length_ratio = perf_len / (score_len + 1e-7)
             pos_similarities.append(
                 (
@@ -125,7 +130,11 @@ def main(_):
                     neg_timewarping_similarity,
                     _,
                 ) = similarity.score(
-                    score, prev_perf, settling_frame, compensation_frame
+                    score,
+                    prev_perf,
+                    settling_frame,
+                    compensation_frame,
+                    use_subsequence_dtw,
                 )
                 neg_length_ratio = prev_perf_len / (score_len + 1e-7)
                 neg_similarities.append(

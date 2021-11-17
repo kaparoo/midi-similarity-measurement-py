@@ -92,8 +92,8 @@ def score(
     if return_execution_times:
         timestamp3 = time.time()
 
-    if use_subsequence_dtw:        
-        timewarping_similarity, (head, tail), _ = algorithm.subsequence_matching(
+    if use_subsequence_dtw:
+        timewarping_similarity, (head, tail), _ = algorithm.subsequence_dtw(
             source_sequence, target_sequence, cost_metric, stabilize=True
         )
         if return_execution_times:
@@ -107,7 +107,7 @@ def score(
         )
         if return_execution_times:
             timestamp4 = time.time()
-        
+
         source_histogram = source.to_pitch_histogram()
         target_histogram = target.to_pitch_histogram()
 

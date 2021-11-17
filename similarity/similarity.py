@@ -94,18 +94,23 @@ def score(
         timestamp3 = time.time()
 
     if use_subsequence_dtw:
-        timewarping_similarity, (head, tail), _ = algorithm.subsequence_matching(
+        timewarping_similarity, (head, tail), _ = algorithm.subsequence_dtw(
             source_sequence, target_sequence, cost_metric, stabilize=True
         )
         if return_execution_times:
             timestamp4 = time.time()
 
         if use_decay_for_histogram:
-            source_histogram = source.to_pitch_histogram()
-            target_histogram = target[head : tail + 1].to_pitch_histogram()
+            source_histogram = source.to_pitch_histogram(with_decay=True)
+            target_histogram = target[head : tail + 1].to_pitch_histogram(
+                with_decay=True
+            )
         else:
-            source_histogram = None
-            target_histogram = None
+            source_histogram = source.to_pitch_histogram(with_decay=False)
+            target_histogram = target[head : tail + 1].to_pitch_histogram(
+                with_decay=False
+            )
+
     else:
         timewarping_similarity = algorithm.levenshtein(
             source_sequence, target_sequence, cost_metric, stabilize=True
@@ -114,8 +119,11 @@ def score(
             timestamp4 = time.time()
 
         if use_decay_for_histogram:
-            source_histogram = source.to_pitch_histogram()
-            target_histogram = target.to_pitch_histogram()
+            source_histogram = source.to_pitch_histogram(with_decay=True)
+            target_histogram = target.to_pitch_histogram(with_decay=True)
+        else:
+            source_histogram = source.to_pitch_histogram(with_decay=False)
+            target_histogram = target.to_pitch_histogram(with_decay=False)
 
     if return_execution_times:
         timestamp5 = time.time()

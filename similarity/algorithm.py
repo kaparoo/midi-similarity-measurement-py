@@ -96,7 +96,7 @@ def dtw(
     return cost
 
 
-def subsequence_matching(
+def subsequence_dtw(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,
     cost_metric: CostMetric = compare_cost_fn,

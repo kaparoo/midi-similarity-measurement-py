@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import math
+import midi
 import numbers
 import numpy as np
 import os
 import pathlib
 import random
 from typing import Any, Generator, List, Tuple, Union
+import warnings
 
-from midi import Annotation, MIDIParser
+warnings.filterwarnings("ignore", category=UserWarning, module="madmom")
 
 __all__ = ["spawn"]
 
@@ -37,13 +39,13 @@ def _verify_arguments(
     elif isinstance(dataset_root, str):
         dataset_root = dataset_root.strip()
         if not dataset_root:
-            raise ValueError()
+            raise ValueError()  # empty string
         else:
             dataset_root = pathlib.Path(dataset_root)
     if not dataset_root.exists():
-        raise FileNotFoundError()
+        raise FileNotFoundError(dataset_root)
     elif not dataset_root.is_dir():
-        raise FileExistsError()
+        raise FileExistsError(dataset_root)
 
     if not isinstance(slice_duration, numbers.Real):
         raise TypeError(type(slice_duration))
@@ -82,7 +84,7 @@ def spawn(
     )
     _debug_log(dataset_root, slice_duration, expansion_rate, frame_per_second)
 
-    midi_parser = MIDIParser(show=False)
+    midi_parser = midi.MIDIParser(show=False)
 
     # TODO(kaparoo): Replace logic to use methods of pathlib.Path (e.g. iterdir, glob)
     dataset_infos: List[Tuple[pathlib.Path, List[str]]] = []
@@ -107,7 +109,7 @@ def spawn(
         _, _, _, score_midi_matrix, _ = midi_parser.process(
             str(score_midi_path), return_midi_matrix=True, fps=frame_per_second
         )  # score_midi_matrix: 128 x N'
-        score_annotation = Annotation(root_path, score_midi_path.stem)
+        score_annotation = midi.Annotation(root_path, score_midi_path.stem)
 
         _debug_log(f"score_midi_path: {score_midi_path}")
         _debug_log(f"score_midi_matrix.shape: {score_midi_matrix.shape}")
@@ -118,7 +120,7 @@ def spawn(
             _, _, _, perf_midi_matrix, _ = midi_parser.process(
                 str(perf_midi_path), return_midi_matrix=True, fps=frame_per_second
             )  # perf_midi_matrix: 128 x M'
-            perf_annotation = Annotation(root_path, perf_midi_path.stem)
+            perf_annotation = midi.Annotation(root_path, perf_midi_path.stem)
 
             _debug_log(f"perf_midi_path: {perf_midi_path}")
             _debug_log(f"perf_midi_matrix.shape: {perf_midi_matrix.shape}")
@@ -142,7 +144,7 @@ def spawn(
                         _debug_log(f"score_matrix_head: {score_matrix_head}")
                         _debug_log(f"score_matrix_tail: {score_matrix_tail}")
 
-                        sliced_score_midi_matrix = score_midi_matrix[
+                        sliced_score_midi_matrix: np.ndarray = score_midi_matrix[
                             :, score_matrix_head:score_matrix_tail
                         ]  # 128 x N
 
@@ -185,7 +187,7 @@ def spawn(
                         _debug_log(f"expanded_perf_tail: {expanded_perf_matrix_tail}")
                         _debug_log(f"expanded_perf_len: {expanded_perf_len}")
 
-                        sliced_perf_midi_matrix = perf_midi_matrix[
+                        sliced_perf_midi_matrix: np.ndarray = perf_midi_matrix[
                             :, expanded_perf_matrix_head:expanded_perf_matrix_tail
                         ]  # 128 x M
 

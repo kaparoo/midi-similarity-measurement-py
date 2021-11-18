@@ -134,74 +134,91 @@ def main(_):
 
         prev_perfs: List[np.ndarray] = [None] * queue_size
 
-        for sample_idx, (score, perf, (head, tail)) in tqdm.tqdm(
-            enumerate(dataset), total=num_samples, desc="Measuring similarities..."
-        ):
-            score_len = score.shape[-1]
-            perf_len = perf.shape[-1]
+        try:
+            for sample_idx in tqdm.trange(
+                num_samples, desc="Measuring similarities..."
+            ):
+                score, perf, (head, tail) = next(dataset)
+                score_len = score.shape[-1]
+                perf_len = perf.shape[-1]
 
-            (pos_histogram_distance, pos_timewarping_distance, _,) = similarity.measure(
-                score,
-                perf,
-                settling_frame,
-                compensation_frame,
-                use_subsequence_dtw,
-                use_decay_for_histogram,
-            )
-            pos_length_ratio = perf_len / (score_len + 1e-7)
-            pos_similarities.append(
-                (pos_histogram_distance, pos_timewarping_distance, pos_length_ratio,)
-            )
-            pos_csvfile.writerow(
-                [pos_histogram_distance, pos_timewarping_distance, pos_length_ratio,]
-            )
-
-            np.savez(
-                npz_root / f"pos_{sample_idx}.npz",
-                score=score,
-                perf=perf,
-                alignment=(head, tail),
-            )
-
-            if isinstance(prev_perfs[0], np.ndarray):
-                prev_perf = prev_perfs[0]
-                prev_perf_len = prev_perf.shape[-1]
                 (
-                    neg_histogram_distance,
-                    neg_timewarping_distance,
+                    pos_histogram_distance,
+                    pos_timewarping_distance,
                     _,
                 ) = similarity.measure(
                     score,
-                    prev_perf,
+                    perf,
                     settling_frame,
                     compensation_frame,
                     use_subsequence_dtw,
                     use_decay_for_histogram,
                 )
-                neg_length_ratio = prev_perf_len / (score_len + 1e-7)
-                neg_similarities.append(
+                pos_length_ratio = perf_len / (score_len + 1e-7)
+                pos_similarities.append(
                     (
-                        neg_histogram_distance,
-                        neg_timewarping_distance,
-                        neg_length_ratio,
+                        pos_histogram_distance,
+                        pos_timewarping_distance,
+                        pos_length_ratio,
                     )
                 )
-                neg_csvfile.writerow(
+                pos_csvfile.writerow(
                     [
-                        neg_histogram_distance,
-                        neg_timewarping_distance,
-                        neg_length_ratio,
+                        pos_histogram_distance,
+                        pos_timewarping_distance,
+                        pos_length_ratio,
                     ]
                 )
 
                 np.savez(
-                    npz_root / f"neg_{sample_idx-queue_size}.npz",
+                    npz_root / f"pos_{sample_idx}.npz",
                     score=score,
-                    perf=prev_perf,
+                    perf=perf,
+                    alignment=(head, tail),
                 )
 
-            prev_perfs.pop(0)
-            prev_perfs.append(perf)
+                if isinstance(prev_perfs[0], np.ndarray):
+                    prev_perf = prev_perfs[0]
+                    prev_perf_len = prev_perf.shape[-1]
+                    (
+                        neg_histogram_distance,
+                        neg_timewarping_distance,
+                        _,
+                    ) = similarity.measure(
+                        score,
+                        prev_perf,
+                        settling_frame,
+                        compensation_frame,
+                        use_subsequence_dtw,
+                        use_decay_for_histogram,
+                    )
+                    neg_length_ratio = prev_perf_len / (score_len + 1e-7)
+                    neg_similarities.append(
+                        (
+                            neg_histogram_distance,
+                            neg_timewarping_distance,
+                            neg_length_ratio,
+                        )
+                    )
+                    neg_csvfile.writerow(
+                        [
+                            neg_histogram_distance,
+                            neg_timewarping_distance,
+                            neg_length_ratio,
+                        ]
+                    )
+
+                    np.savez(
+                        npz_root / f"neg_{sample_idx-queue_size}.npz",
+                        score=score,
+                        perf=prev_perf,
+                    )
+
+                prev_perfs.pop(0)
+                prev_perfs.append(perf)
+
+        except StopIteration:
+            print("Loading dataset is finished at iteration {idx}.")
 
         pos_similarities = np.array(pos_similarities)
         neg_similarities = np.array(neg_similarities)
@@ -210,7 +227,4 @@ def main(_):
 
 
 if __name__ == "__main__":
-    import warnings
-
-    warnings.filterwarnings("ignore", category=UserWarning)
     app.run(main)

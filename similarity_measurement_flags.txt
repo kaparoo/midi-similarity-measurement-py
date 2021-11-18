@@ -1,3 +1,5 @@
+# python similarity_measurement.py --flagfile=./similarity_measurement_flags.txt --dataset_root=../../sabana/dataset/asap-dataset --save_root=./save_asap
+
 slice_duration=5.0
 expansion_rate=1.5
 num_samples=100

@@ -5,12 +5,13 @@ from absl import flags
 
 import csv
 import dataset_loader
-import matplotlib.pyplot as plt
+import metadata
 import numpy as np
 import pathlib
 import similarity
 import tqdm
 from typing import List, Tuple
+import util
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("dataset_root", None, "", required=True)
@@ -26,50 +27,6 @@ flags.DEFINE_bool("use_subsequence_dtw", True, "")
 flags.DEFINE_bool("use_decay_for_histogram", True, "")
 
 _CSV_HEADER = ["Histogram distance", "Timewarping distance", "Length ratio"]
-
-
-def _plot_scatters(
-    save_root: pathlib.Path, pos_similarities: np.ndarray, neg_similarities: np.ndarray
-):
-    fig = plt.figure("scatter_2d")
-    ax = fig.gca()
-    ax.set_xlabel("Histogram distance")
-    ax.set_ylabel("Timewarping distance")
-    ax.scatter(pos_similarities[:, 0], pos_similarities[:, 1], c="k", label="Positive")
-    ax.scatter(
-        neg_similarities[:, 0],
-        neg_similarities[:, 1],
-        c="w",
-        edgecolors="k",
-        label="Negative",
-    )
-    plt.legend()
-    plt.savefig(save_root / "scatter_2d.png")
-    plt.clf()
-
-    fig = plt.figure("scatter_3d")
-    ax = fig.gca(projection="3d")
-    ax.set_xlabel("Histogram distance")
-    ax.set_ylabel("Timewarping distance")
-    ax.set_zlabel("Length ratio")
-    ax.scatter(
-        pos_similarities[:, 0],
-        pos_similarities[:, 1],
-        pos_similarities[:, 2],
-        c="k",
-        label="Positive",
-    )
-    ax.scatter(
-        neg_similarities[:, 0],
-        neg_similarities[:, 1],
-        neg_similarities[:, 2],
-        c="w",
-        edgecolors="k",
-        label="Negative",
-    )
-    plt.legend()
-    plt.savefig(save_root / "scatter_3d.png")
-    plt.clf()
 
 
 def main(_):
@@ -89,43 +46,33 @@ def main(_):
     elif not npz_root.is_dir():
         raise FileExistsError(npz_root)
 
-    with open(save_root / "config.txt", "w", encoding="utf8") as config, open(
-        save_root / "pos.csv", "w", encoding="utf8"
-    ) as pos_csv, open(save_root / "neg.csv", "w", encoding="utf8") as neg_csv:
+    with open(save_root / "pos.csv", "w", encoding="utf8") as pos_csv, open(
+        save_root / "neg.csv", "w", encoding="utf8"
+    ) as neg_csv:
         pos_csvfile = csv.writer(pos_csv, delimiter=",", quotechar="|")
         pos_csvfile.writerow(_CSV_HEADER)
         neg_csvfile = csv.writer(neg_csv, delimiter=",", quotechar="|")
         neg_csvfile.writerow(_CSV_HEADER)
 
-        settling_frame = FLAGS.settling_frame
-        compensation_frame = FLAGS.compensation_frame
-        slice_duration = FLAGS.slice_duration
-        expansion_rate = FLAGS.expansion_rate
-        frame_per_second = FLAGS.frame_per_second
-        queue_size = FLAGS.queue_size
         num_samples = FLAGS.num_samples
-        use_subsequence_dtw = FLAGS.use_subsequence_dtw
-        use_decay_for_histogram = FLAGS.use_decay_for_histogram
-
-        config.writelines(
-            [
-                f"dataset_root: {str(dataset_root)}\n",
-                f"num_samples: {num_samples}\n"
-                f"frame_per_second: {frame_per_second}(Hz)\n",
-                f"slice_duration: {slice_duration}(sec)\n",
-                f"expansion_rate: {expansion_rate}\n",
-                f"settling_frame: {settling_frame}\n",
-                f"compensation_frame: {compensation_frame}\n",
-                f"use_subsequence_dtw: {use_subsequence_dtw}\n",
-                f"use_decay_for_histogram: {use_decay_for_histogram}\n",
-            ]
+        queue_size = FLAGS.queue_size
+        config = metadata.Metadata(
+            dataset_root=str(dataset_root),
+            frame_per_second=FLAGS.frame_per_second,
+            slice_duration=FLAGS.slice_duration,
+            expansion_rate=FLAGS.expansion_rate,
+            settling_frame=FLAGS.settling_frame,
+            compensation_frame=FLAGS.compensation_frame,
+            use_subsequence_dtw=FLAGS.use_subsequence_dtw,
+            use_decay_for_histogram=FLAGS.use_decay_for_histogram,
         )
+        config.save(filepath=save_root / "config.json")
 
         dataset = dataset_loader.spawn(
             dataset_root=dataset_root,
-            slice_duration=slice_duration,
-            expansion_rate=expansion_rate,
-            frame_per_second=frame_per_second,
+            slice_duration=config.slice_duration,
+            expansion_rate=config.expansion_rate,
+            frame_per_second=config.frame_per_second,
             shuffle=True,
         )
 
@@ -149,10 +96,10 @@ def main(_):
                 ) = similarity.measure(
                     score,
                     perf,
-                    settling_frame,
-                    compensation_frame,
-                    use_subsequence_dtw,
-                    use_decay_for_histogram,
+                    config.settling_frame,
+                    config.compensation_frame,
+                    config.use_subsequence_dtw,
+                    config.use_decay_for_histogram,
                 )
                 pos_length_ratio = perf_len / (score_len + 1e-7)
                 pos_similarities.append(
@@ -187,10 +134,10 @@ def main(_):
                     ) = similarity.measure(
                         score,
                         prev_perf,
-                        settling_frame,
-                        compensation_frame,
-                        use_subsequence_dtw,
-                        use_decay_for_histogram,
+                        config.settling_frame,
+                        config.compensation_frame,
+                        config.use_subsequence_dtw,
+                        config.use_decay_for_histogram,
                     )
                     neg_length_ratio = prev_perf_len / (score_len + 1e-7)
                     neg_similarities.append(
@@ -218,12 +165,12 @@ def main(_):
                 prev_perfs.append(perf)
 
         except StopIteration:
-            print("Loading dataset is finished at iteration {idx}.")
+            print(f"Loading dataset is finished at iteration {sample_idx}.")
 
         pos_similarities = np.array(pos_similarities)
         neg_similarities = np.array(neg_similarities)
 
-        _plot_scatters(save_root, pos_similarities, neg_similarities)
+        util.plot_scatters(save_root, pos_similarities, neg_similarities)
 
 
 if __name__ == "__main__":

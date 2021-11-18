@@ -94,7 +94,7 @@ def measure(
         timestamp3 = time.time()
 
     if use_subsequence_dtw:
-        timewarping_similarity, (head, tail), _ = algorithm.subsequence_dtw(
+        timewarping_distance, (head, tail), _ = algorithm.subsequence_dtw(
             source_sequence, target_sequence, cost_metric, stabilize=True
         )
         if return_execution_times:
@@ -112,7 +112,7 @@ def measure(
             )
 
     else:
-        timewarping_similarity = algorithm.levenshtein(
+        timewarping_distance = algorithm.levenshtein(
             source_sequence, target_sequence, cost_metric, stabilize=True
         )
         if return_execution_times:
@@ -128,7 +128,7 @@ def measure(
     if return_execution_times:
         timestamp5 = time.time()
 
-    euclidean_similarity = algorithm.euclidean(source_histogram, target_histogram)
+    histogram_distance = algorithm.euclidean(source_histogram, target_histogram)
 
     if return_execution_times:
         timestamp6 = time.time()
@@ -146,7 +146,7 @@ def measure(
         }
 
     return (
-        euclidean_similarity,
-        timewarping_similarity,
+        histogram_distance,
+        timewarping_distance,
         execution_times,
     )

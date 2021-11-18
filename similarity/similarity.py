@@ -54,7 +54,7 @@ def _verify_arguments(
     return source_midi_matrix, target_midi_matrix, settling_frame, compensation_frame
 
 
-def score(
+def measure(
     source_midi_matrix: np.ndarray,
     target_midi_matrix: np.ndarray,
     settling_frame: int = 10,

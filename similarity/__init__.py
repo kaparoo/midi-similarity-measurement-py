@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from . import algorithm
-from .similarity import score
+from .similarity import measure
 
-__all__ = ["algorithm", "score"]
+__all__ = ["algorithm", "measure"]

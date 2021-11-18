@@ -5,12 +5,12 @@ from absl import flags
 
 import csv
 import dataset_loader
+import matplotlib.pyplot as plt
 import numpy as np
 import pathlib
 import similarity
 import tqdm
 from typing import List, Tuple
-import warnings
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("dataset_root", None, "", required=True)
@@ -26,6 +26,50 @@ flags.DEFINE_bool("use_subsequence_dtw", True, "")
 flags.DEFINE_bool("use_decay_for_histogram", True, "")
 
 _CSV_HEADER = ["Histogram distance", "Timewarping distance", "Length ratio"]
+
+
+def _plot_scatters(
+    save_root: pathlib.Path, pos_similarities: np.ndarray, neg_similarities: np.ndarray
+):
+    fig = plt.figure("scatter_2d")
+    ax = fig.gca()
+    ax.set_xlabel("Histogram distance")
+    ax.set_ylabel("Timewarping distance")
+    ax.scatter(pos_similarities[:, 0], pos_similarities[:, 1], c="k", label="Positive")
+    ax.scatter(
+        neg_similarities[:, 0],
+        neg_similarities[:, 1],
+        c="w",
+        edgecolors="k",
+        label="Negative",
+    )
+    plt.legend()
+    plt.savefig(save_root / "scatter_2d.png")
+    plt.clf()
+
+    fig = plt.figure("scatter_3d")
+    ax = fig.gca(projection="3d")
+    ax.set_xlabel("Histogram distance")
+    ax.set_ylabel("Timewarping distance")
+    ax.set_zlabel("Length ratio")
+    ax.scatter(
+        pos_similarities[:, 0],
+        pos_similarities[:, 1],
+        pos_similarities[:, 2],
+        c="k",
+        label="Positive",
+    )
+    ax.scatter(
+        neg_similarities[:, 0],
+        neg_similarities[:, 1],
+        neg_similarities[:, 2],
+        c="w",
+        edgecolors="k",
+        label="Negative",
+    )
+    plt.legend()
+    plt.savefig(save_root / "scatter_3d.png")
+    plt.clf()
 
 
 def main(_):
@@ -90,12 +134,13 @@ def main(_):
 
         prev_perfs: List[np.ndarray] = [None] * queue_size
 
-        for sample_idx in tqdm.tqdm(range(num_samples)):
-            score, perf, (head, tail) = next(dataset)
+        for sample_idx, (score, perf, (head, tail)) in tqdm.tqdm(
+            enumerate(dataset), total=num_samples, desc="Measuring similarities..."
+        ):
             score_len = score.shape[-1]
             perf_len = perf.shape[-1]
 
-            (pos_histogram_distance, pos_timewarping_distance, _,) = similarity.score(
+            (pos_histogram_distance, pos_timewarping_distance, _,) = similarity.measure(
                 score,
                 perf,
                 settling_frame,
@@ -125,7 +170,7 @@ def main(_):
                     neg_histogram_distance,
                     neg_timewarping_distance,
                     _,
-                ) = similarity.score(
+                ) = similarity.measure(
                     score,
                     prev_perf,
                     settling_frame,
@@ -158,7 +203,14 @@ def main(_):
             prev_perfs.pop(0)
             prev_perfs.append(perf)
 
+        pos_similarities = np.array(pos_similarities)
+        neg_similarities = np.array(neg_similarities)
+
+        _plot_scatters(save_root, pos_similarities, neg_similarities)
+
 
 if __name__ == "__main__":
+    import warnings
+
     warnings.filterwarnings("ignore", category=UserWarning)
     app.run(main)

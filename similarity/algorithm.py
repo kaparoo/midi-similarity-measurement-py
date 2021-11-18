@@ -161,7 +161,7 @@ def subsequence_dtw(
     optimal_warping_path[::-1]  # monotonically increasing
 
     if stabilize:
-        subsequence_len = tail - head + 1e-7
+        subsequence_len = tail - head + 1
         cost = cost / (source_len * subsequence_len) ** 0.5
 
     return (

@@ -59,6 +59,9 @@ class MIDIUnit(object):
         else:
             return "Rest"
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
     @staticmethod
     def new_rest():
         return MIDIUnit(MAX_MIDI_KEY + 1, 0.0)
@@ -81,6 +84,9 @@ class MIDIUnitSequence(list):
     def __str__(self) -> str:
         units = [unit.__str__() for unit in self]
         return "[" + ", ".join(units) + "]"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class MIDIUnitSequenceList(list):
@@ -136,6 +142,9 @@ class MIDIUnitSequenceList(list):
     def __str__(self) -> str:
         sequences = [sequence.__str__() for sequence in self]
         return "[" + ", ".join(sequences) + "]"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def __getitem__(self, val):
         if isinstance(val, slice):

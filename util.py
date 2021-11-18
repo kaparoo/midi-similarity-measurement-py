@@ -2,16 +2,17 @@ import matplotlib.pyplot as plt
 import midi
 import numpy as np
 import pathlib
-from typing import Union
+from typing import List, Optional, Tuple, Union
 
 
 def plot_midi_matrices(
     score: np.ndarray,
     perf: np.ndarray,
-    head: int = None,
-    tail: int = None,
+    original_alignment: Tuple[int, int],
+    predicted_alignment: Optional[Tuple[int, int]] = None,
     title: str = None,
 ) -> None:
+    ylim = [midi.MIN_MIDI_KEY, midi.MAX_MIDI_KEY]
     plt.figure(figsize=(16, 9))
     if title:
         plt.suptitle(title)
@@ -29,11 +30,17 @@ def plot_midi_matrices(
     plt.imshow(
         perf, cmap="gray", aspect="auto", origin="lower", interpolation="nearest"
     )
-    plt.plot([head, head], [midi.MIN_MIDI_KEY, midi.MAX_MIDI_KEY])
-    plt.plot([tail, tail], [midi.MIN_MIDI_KEY, midi.MAX_MIDI_KEY])
+    head, tail = original_alignment
+    plt.plot([head, head], ylim, label="original_head")
+    plt.plot([tail, tail], ylim, label="original_tail")
+    if predicted_alignment:
+        head, tail = predicted_alignment
+        plt.plot([head, head], ylim, label="predicted_head")
+        plt.plot([tail, tail], ylim, label="predicted_tail")
+    plt.legend()
     plt.ylabel("MIDI Key")
     plt.xlabel("Frame")
-    plt.ylim(midi.MIN_MIDI_KEY, midi.MAX_MIDI_KEY)
+    plt.ylim(ylim)
     plt.show()
     plt.clf()
 
@@ -41,7 +48,7 @@ def plot_midi_matrices(
 def process_decay_to_midi_matrix(
     midi_matrix: np.ndarray, settling_frame: int = 8
 ) -> np.ndarray:
-    prev_pressed = [False] * midi.NUM_MIDI_KEYS
+    prev_pressed: List[bool] = [False] * midi.NUM_MIDI_KEYS
     midi_matrix = np.reshape(midi_matrix.copy(), [midi.NUM_MIDI_KEYS, -1]).T
     for frame_idx in range(len(midi_matrix)):
         for midi_key in range(midi.NUM_MIDI_KEYS):
@@ -62,7 +69,7 @@ def process_decay_to_midi_matrix(
     return midi_matrix.T
 
 
-def plot_scatters(
+def save_scatter_plots(
     save_root: Union[str, pathlib.Path],
     pos_similarities: np.ndarray,
     neg_similarities: np.ndarray,

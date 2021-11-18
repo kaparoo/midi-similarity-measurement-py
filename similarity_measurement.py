@@ -170,7 +170,7 @@ def main(_):
         pos_similarities = np.array(pos_similarities)
         neg_similarities = np.array(neg_similarities)
 
-        util.plot_scatters(save_root, pos_similarities, neg_similarities)
+        util.save_scatter_plots(save_root, pos_similarities, neg_similarities)
 
 
 if __name__ == "__main__":

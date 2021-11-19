@@ -116,3 +116,12 @@ def save_scatter_plots(
     plt.legend()
     plt.savefig(save_root / "scatter_3d.png")
     plt.clf()
+
+
+def compute_moving_averages(data: np.ndarray, width: int) -> np.ndarray:
+    num_datas = len(data)
+    moving_averages = np.convolve(data, np.ones(width), mode="same") / width
+    average_max = np.max(moving_averages)
+    moving_averages[0 : width // 2] = average_max
+    moving_averages[num_datas - width // 2 : num_datas] = average_max
+    return moving_averages

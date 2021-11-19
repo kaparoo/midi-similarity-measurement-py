@@ -19,44 +19,6 @@ def compare_cost_fn(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
     return float(s.get_midi_key() != t.get_midi_key())
 
 
-def levenshtein(
-    source_sequence: midi.MIDIUnitSequence,
-    target_sequence: midi.MIDIUnitSequence,
-    cost_metric: CostMetric = compare_cost_fn,
-    stabilize: bool = True,
-) -> float:
-    if not isinstance(source_sequence, midi.MIDIUnitSequence):
-        raise TypeError(type(source_sequence))
-    if not isinstance(target_sequence, midi.MIDIUnitSequence):
-        raise TypeError(type(target_sequence))
-
-    source_len, target_len = len(source_sequence), len(target_sequence)
-    accumulated_cost_matrix = np.zeros([source_len, target_len], dtype=np.float32)
-
-    for i, s in enumerate(source_sequence):
-        for j, t in enumerate(target_sequence):
-            if i == 0 and j == 0:
-                pass
-            elif i == 0:
-                accumulated_cost_matrix[0, j] = j
-            elif j == 0:
-                accumulated_cost_matrix[i, 0] = i
-            else:
-                accumulated_cost_matrix[i, j] = min(
-                    [
-                        accumulated_cost_matrix[i - 1, j] + 1,
-                        accumulated_cost_matrix[i, j - 1] + 1,
-                        accumulated_cost_matrix[i - 1, j - 1] + cost_metric(s, t),
-                    ]
-                )
-
-    cost = accumulated_cost_matrix[source_len - 1, target_len - 1]
-    if stabilize:
-        cost = cost / (source_len * target_len) ** 0.5
-
-    return cost
-
-
 def dtw(
     source_sequence: midi.MIDIUnitSequence,
     target_sequence: midi.MIDIUnitSequence,

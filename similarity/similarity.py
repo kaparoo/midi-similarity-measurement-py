@@ -112,7 +112,7 @@ def measure(
             )
 
     else:
-        timewarping_distance = algorithm.levenshtein(
+        timewarping_distance = algorithm.dtw(
             source_sequence, target_sequence, cost_metric, stabilize=True
         )
         if return_execution_times:

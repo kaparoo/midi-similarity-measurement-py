@@ -16,15 +16,18 @@ import util
 FLAGS = flags.FLAGS
 flags.DEFINE_string("dataset_root", None, "", required=True)
 flags.DEFINE_string("save_root", None, "", required=True)
+
 flags.DEFINE_float("slice_duration", 5.0, "", lower_bound=1.0)
 flags.DEFINE_float("expansion_rate", 1.5, "", lower_bound=1.0)
-flags.DEFINE_integer("num_samples", 100, "", lower_bound=1)
 flags.DEFINE_integer("frame_per_second", 20, "", lower_bound=20)
 flags.DEFINE_integer("settling_frame", 10, "", lower_bound=1)
 flags.DEFINE_integer("compensation_frame", 0, "", lower_bound=0)
-flags.DEFINE_integer("queue_size", 8, "", lower_bound=8)
 flags.DEFINE_bool("use_subsequence_dtw", True, "")
 flags.DEFINE_bool("use_decay_for_histogram", True, "")
+
+flags.DEFINE_integer("num_samples", 100, "", lower_bound=1)
+flags.DEFINE_integer("queue_size", 8, "", lower_bound=8)
+flags.DEFINE_bool("save_npz", True, "")
 
 _CSV_HEADER = ["Histogram distance", "Timewarping distance", "Length ratio"]
 
@@ -40,11 +43,12 @@ def main(_):
     elif not save_root.is_dir():
         raise FileExistsError(save_root)
 
-    npz_root = save_root / "npz"
-    if not npz_root.exists():
-        npz_root.mkdir(parents=True, exist_ok=True)
-    elif not npz_root.is_dir():
-        raise FileExistsError(npz_root)
+    if FLAGS.save_npz:
+        npz_root = save_root / "npz"
+        if not npz_root.exists():
+            npz_root.mkdir(parents=True, exist_ok=True)
+        elif not npz_root.is_dir():
+            raise FileExistsError(npz_root)
 
     with open(save_root / "pos.csv", "w", encoding="utf8") as pos_csv, open(
         save_root / "neg.csv", "w", encoding="utf8"
@@ -117,12 +121,13 @@ def main(_):
                     ]
                 )
 
-                np.savez(
-                    npz_root / f"pos_{sample_idx}.npz",
-                    score=score,
-                    perf=perf,
-                    alignment=(head, tail),
-                )
+                if FLAGS.save_npz:
+                    np.savez(
+                        npz_root / f"pos_{sample_idx}.npz",
+                        score=score,
+                        perf=perf,
+                        alignment=(head, tail),
+                    )
 
                 if isinstance(prev_perfs[0], np.ndarray):
                     prev_perf = prev_perfs[0]
@@ -155,11 +160,13 @@ def main(_):
                         ]
                     )
 
-                    np.savez(
-                        npz_root / f"neg_{sample_idx-queue_size}.npz",
-                        score=score,
-                        perf=prev_perf,
-                    )
+                    if FLAGS.save_npz:
+                        np.savez(
+                            npz_root / f"neg_{sample_idx-queue_size}.npz",
+                            score=score,
+                            perf=prev_perf,
+                            alignment=(0, 0),
+                        )
 
                 prev_perfs.pop(0)
                 prev_perfs.append(perf)

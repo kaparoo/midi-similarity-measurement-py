@@ -43,34 +43,35 @@ def new(
     root: PathLike,
     slice_duration: float = 1.0,
     expansion_rate: float = 1.5,
-    fps: int = 20,
+    offset_scale: float = 1.0,
+    frame_per_second: int = 20,
     shuffle: bool = True,
 ) -> Generator[Tuple[np.ndarray, np.ndarray, Tuple[int, int]], None, None]:
-    midi_parser = MIDIParser()
+    midi_parser = MIDIParser(fps=frame_per_second, offset_scale=offset_scale)
     for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
         score_midi = perf_root / "score.mid"
-        score_matrix = midi_parser.process(str(score_midi), fps=fps)
+        score_matrix = midi_parser.process(str(score_midi))
         score_annotation = Annotation(path=perf_root, prefix="score")
 
         for perf_file in perf_files:
             perf_midi = perf_root / perf_file
-            perf_matrix = midi_parser.process(str(perf_midi), fps=fps)
+            perf_matrix = midi_parser.process(str(perf_midi))
             perf_annotation = Annotation(path=perf_root, prefix=perf_midi.stem)
 
             prev_index = 0
             prev_score_onset = perf_annotation[0]
             for curr_index, curr_score_onset in enumerate(score_annotation):
                 if curr_score_onset - prev_score_onset >= slice_duration:
-                    score_head = math.floor(fps * prev_score_onset)
-                    score_tail = math.floor(fps * curr_score_onset)
+                    score_head = math.floor(frame_per_second * prev_score_onset)
+                    score_tail = math.floor(frame_per_second * curr_score_onset)
                     sliced_score_matrix: np.ndarray = np.copy(
                         score_matrix[:, score_head:score_tail]
                     )
 
                     prev_perf_onset = perf_annotation[prev_index]
                     curr_perf_onset = perf_annotation[curr_index]
-                    perf_head = math.floor(fps * prev_perf_onset)
-                    perf_tail = math.floor(fps * curr_perf_onset)
+                    perf_head = math.floor(frame_per_second * prev_perf_onset)
+                    perf_tail = math.floor(frame_per_second * curr_perf_onset)
                     perf_size = perf_tail - perf_head
 
                     num_perf_frames = perf_matrix.shape[-1]

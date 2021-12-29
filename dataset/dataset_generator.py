@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from dataset_annotation import Annotation
-
 import math
-from midi_parser import MIDIParser
 import numpy as np
 
 from os import PathLike
@@ -11,6 +8,16 @@ from pathlib import Path
 
 import random
 from typing import Dict, Generator, Iterable, Tuple
+
+try:
+    from dataset_annotation import Annotation
+    from midi_parser import MIDIParser
+except ImportError:
+    from .dataset_annotation import Annotation
+    from .midi_parser import MIDIParser
+
+
+__all__ = ["new"]
 
 
 def clip(val: float, min_=float("-inf"), max_=float("inf")) -> float:
@@ -47,7 +54,7 @@ def new(
     frame_per_second: int = 20,
     shuffle: bool = True,
 ) -> Generator[Tuple[np.ndarray, np.ndarray, Tuple[int, int]], None, None]:
-    midi_parser = MIDIParser(fps=frame_per_second, offset_scale=offset_scale)
+    midi_parser = MIDIParser(fps=frame_per_second, scale=offset_scale)
     for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
         score_midi = perf_root / "score.mid"
         score_matrix = midi_parser.process(str(score_midi))

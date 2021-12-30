@@ -50,11 +50,11 @@ def new(
     root: PathLike,
     slice_duration: float = 1.0,
     expansion_rate: float = 1.5,
-    offset_scale: float = 1.0,
+    note_scale: float = 1.0,
     frame_per_second: int = 20,
     shuffle: bool = True,
 ) -> Generator[Tuple[np.ndarray, np.ndarray, Tuple[int, int]], None, None]:
-    midi_parser = MIDIParser(fps=frame_per_second, scale=offset_scale)
+    midi_parser = MIDIParser(fps=frame_per_second, note_scale=note_scale)
     for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
         score_midi = perf_root / "score.mid"
         score_matrix = midi_parser.process(str(score_midi))

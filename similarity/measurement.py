@@ -27,7 +27,7 @@ def measure(
 
     source_sequence = source.repr_unit_sequence
     target_sequence = target.repr_unit_sequence
-    timewarping_distance, (head, tail), _ = dtw(
+    timewarping_distance, (head, tail), _, _ = dtw(
         source_sequence, target_sequence, cost_fn, subsequence
     )
 

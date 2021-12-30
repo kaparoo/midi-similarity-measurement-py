@@ -3,7 +3,7 @@
 import numpy as np
 from typing import Callable
 
-__all__ = ["DecayFn", "get_decay"]
+__all__ = ["DecayFn", "get_decay_fn"]
 
 
 DecayFn = Callable[[np.ndarray], np.ndarray]
@@ -33,6 +33,6 @@ def linear_decay_factory(settling_frame: int = 10) -> DecayFn:
     return linear_decay
 
 
-def get_decay(name: str = "linear", settling_frame: int = 10) -> DecayFn:
+def get_decay_fn(name: str = "linear", settling_frame: int = 10) -> DecayFn:
     if name == "linear":
         return linear_decay_factory(settling_frame)

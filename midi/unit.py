@@ -9,6 +9,9 @@ try:
 except ImportError:
     from .constant import *
 
+__all__ = ["MIDIUnit", "MIDIRest", "MIDIUnitSequence", "MIDIUnitSequenceList"]
+
+
 class MIDIUnit(object):
 
     __slots__ = ["_midi_key", "_velocity"]
@@ -24,7 +27,7 @@ class MIDIUnit(object):
     @staticmethod
     def new_note(midi_key: int, velocity: float) -> "MIDIUnit":
         if not (MAX_MIDI_KEY >= midi_key >= MIN_MIDI_KEY and velocity > 0):
-            raise ValueError(f"({midi_key=:03d}, {velocity=:.2f})")
+            raise ValueError(f"({midi_key=:d}, {velocity=:.2f})")
         return MIDIUnit(midi_key, velocity)
 
     def is_note(self) -> bool:
@@ -43,7 +46,7 @@ class MIDIUnit(object):
 
     @property
     def values(self) -> Tuple[int, float]:
-        return (self._midi_key, self._midi_key)
+        return (self._midi_key, self._velocity)
 
     def __str__(self) -> str:
         if self.is_note():
@@ -81,7 +84,7 @@ class MIDIUnitSequence(list):
 
 
 class MIDIUnitSequenceList(list):
-    def __init__(self, compensation: int = 0, *args) -> None:
+    def __init__(self, compensation: int = 0) -> None:
         self.compensation = compensation
         super(MIDIUnitSequenceList, self).__init__()
 
@@ -114,7 +117,7 @@ class MIDIUnitSequenceList(list):
 
     @staticmethod
     def from_midi_matrix(
-        matrix: np.ndarray, decay_fn: Callable[[np.ndarray], np.ndarray]
+        matrix: np.ndarray, decay_fn: Callable[[np.ndarray], np.ndarray] = lambda x: x
     ) -> "MIDIUnitSequenceList":
         sequnece_list = MIDIUnitSequenceList()
         decayed_matrix = np.zeros_like(matrix)
@@ -126,10 +129,23 @@ class MIDIUnitSequenceList(list):
                 velocity = decayed_matrix[midi_key, frame_idx]
                 if velocity > 0:
                     sequence.append(MIDIUnit.new_note(midi_key, velocity))
-            if len(sequence) != 0:
+            if not sequence:
                 sequence.append(MIDIRest)
             sequnece_list.append(sequence)
         return sequnece_list
+
+    def to_midi_matrix(self, use_velocity: bool = False) -> np.ndarray:
+        num_frames = len(self)
+        matrix = np.zeros((NUM_MIDI_KEYS, num_frames))
+        for frame_idx, sequence in enumerate(self):
+            for unit in sequence:
+                if not unit.is_note():
+                    break
+                midi_key, velocity = unit.values
+                if not use_velocity:
+                    velocity = 1
+                matrix[midi_key, frame_idx] = velocity
+        return matrix
 
     @property
     def pitch_histogram(self) -> np.ndarray:

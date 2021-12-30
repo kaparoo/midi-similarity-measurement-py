@@ -7,13 +7,13 @@ from os import PathLike
 from pathlib import Path
 
 import random
-from typing import Dict, Generator, Iterable, Tuple
+from typing import Dict, Generator, Iterable, Tuple, Union
 
 try:
-    from dataset_annotation import Annotation
+    from annotation import Annotation
     from midi_parser import MIDIParser
 except ImportError:
-    from .dataset_annotation import Annotation
+    from .annotation import Annotation
     from .midi_parser import MIDIParser
 
 
@@ -46,14 +46,21 @@ def load_dataset_info(
         yield perf_root, perf_files
 
 
-def new(
+Dataset = Union[
+    Tuple[np.ndarray, np.ndarray, Tuple[int, int]],
+    Tuple[np.ndarray, np.ndarray, Tuple[int, int], Tuple[Path, str]],
+]
+
+
+def new_generator(
     root: PathLike,
     slice_duration: float = 1.0,
     expansion_rate: float = 1.5,
     note_scale: float = 1.0,
     frame_per_second: int = 20,
     shuffle: bool = True,
-) -> Generator[Tuple[np.ndarray, np.ndarray, Tuple[int, int]], None, None]:
+    verbose: bool = False,
+) -> Generator[Dataset, None, None]:
     midi_parser = MIDIParser(fps=frame_per_second, note_scale=note_scale)
     for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
         score_midi = perf_root / "score.mid"
@@ -71,7 +78,7 @@ def new(
                 if curr_score_onset - prev_score_onset >= slice_duration:
                     score_head = math.floor(frame_per_second * prev_score_onset)
                     score_tail = math.floor(frame_per_second * curr_score_onset)
-                    sliced_score_matrix: np.ndarray = np.copy(
+                    score_slice: np.ndarray = np.copy(
                         score_matrix[:, score_head:score_tail]
                     )
 
@@ -92,7 +99,7 @@ def new(
                     expanded_perf_tail = clip(expanded_perf_tail, 0, num_perf_frames)
                     expanded_perf_tail = int(expanded_perf_tail)
 
-                    sliced_perf_matrix: np.ndarray = np.copy(
+                    perf_slice: np.ndarray = np.copy(
                         perf_matrix[:, expanded_perf_head:expanded_perf_tail]
                     )
 
@@ -100,14 +107,18 @@ def new(
                         perf_head - expanded_perf_head,
                         perf_tail - expanded_perf_head,
                     )
-                    yield sliced_score_matrix, sliced_perf_matrix, alignment
+
+                    if not verbose:
+                        yield score_slice, perf_slice, alignment
+                    else:
+                        yield score_slice, perf_slice, alignment, (perf_root, perf_file)
 
                     prev_index = curr_index
                     prev_score_onset = curr_score_onset
 
 
 if __name__ == "__main__":
-    generator = new(root="../dataset/newbie-dataset/", shuffle=True)
+    generator = new_generator(root="../dataset/newbie-dataset/", shuffle=True)
     score, perf, (head, tail) = next(generator)
 
     import matplotlib.pyplot as plt

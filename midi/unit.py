@@ -2,12 +2,14 @@
 
 import numbers
 import numpy as np
-from typing import Callable, SupportsIndex, Tuple, Union
+from typing import SupportsIndex, Tuple, Union
 
 try:
     from constant import *
+    from decay_fn import *
 except ImportError:
     from .constant import *
+    from .decay_fn import *
 
 __all__ = ["MIDIUnit", "MIDIRest", "MIDIUnitSequence", "MIDIUnitSequenceList"]
 
@@ -117,7 +119,7 @@ class MIDIUnitSequenceList(list):
 
     @staticmethod
     def from_midi_matrix(
-        matrix: np.ndarray, decay_fn: Callable[[np.ndarray], np.ndarray] = lambda x: x
+        matrix: np.ndarray, decay_fn: DecayFn = lambda x: x
     ) -> "MIDIUnitSequenceList":
         sequnece_list = MIDIUnitSequenceList()
         decayed_matrix = np.zeros_like(matrix)
@@ -148,6 +150,14 @@ class MIDIUnitSequenceList(list):
         return matrix
 
     @property
+    def compensation_frame(self) -> int:
+        return self.compensation
+
+    @compensation_frame.setter
+    def compensation_frame(self, val: int) -> None:
+        self.compensation = val
+
+    @property
     def pitch_histogram(self) -> np.ndarray:
         histogram = np.zeros([NUM_PITCH_CLASSES], dtype=np.float32)
         for sequence in self:
@@ -172,45 +182,3 @@ class MIDIUnitSequenceList(list):
         if not repr_sequence:
             repr_sequence.append(MIDIRest)
         return repr_sequence
-
-
-if __name__ == "__main__":
-    note1 = MIDIUnit.new_note(1, 12.3)
-    note2 = MIDIUnit.new_note(10, 1.23)
-    note3 = MIDIUnit.new_note(100, 123)
-
-    sequence1 = MIDIUnitSequence()
-    sequence1.append(note1)
-    sequence1.append(MIDIRest)
-    sequence1.append(note2)
-    sequence1.append(MIDIRest)
-    sequence1.append(MIDIRest)
-    sequence1.append(note3)
-    sequence1.append(MIDIRest)
-    sequence1.append(MIDIRest)
-    sequence1.append(MIDIRest)
-
-    sequence2 = MIDIUnitSequence()
-    sequence2.append(MIDIRest)
-
-    sequence3 = MIDIUnitSequence()
-    sequence3.append(note1)
-    sequence3.append(MIDIRest)
-    sequence3.append(note2)
-    sequence3.append(MIDIRest)
-    sequence3.append(MIDIRest)
-    sequence3.append(note3)
-    sequence3.append(MIDIRest)
-    sequence3.append(MIDIRest)
-    sequence3.append(MIDIRest)
-
-    sequence_list = MIDIUnitSequenceList()
-    sequence_list.append(sequence1)
-    sequence_list.append(sequence2)
-    sequence_list.append(sequence3)
-
-    print(note1, note1.is_note())
-    print(MIDIRest, MIDIRest.is_note())
-    print(sequence1)
-    print(sequence_list)
-    print(sequence_list[1:])

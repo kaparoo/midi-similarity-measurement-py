@@ -5,6 +5,9 @@ import numpy as np
 from typing import Optional, Tuple
 
 
+__all__ = ["plot_midi_matrix"]
+
+
 _MIDI_MATRIX_IMSHOW_OPTION = {
     "cmap": "gray",
     "aspect": "auto",

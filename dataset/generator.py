@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(16, 9), facecolor="white")
     plt.subplot(2, 1, 1)
     plt.title("Score")
     plt.imshow(

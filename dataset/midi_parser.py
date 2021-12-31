@@ -64,7 +64,7 @@ if __name__ == "__main__":
     matrix1, _, _ = midi_parser.process(midi_path, mark_onset=False)
     matrix2, _, _ = midi_parser.process(midi_path, mark_onset=True)
 
-    plt.figure(figsize=(16, 8))
+    plt.figure(figsize=(16, 9), facecolor="white")
 
     plt.subplot(2, 1, 1)
     plt.title("Without Marking")

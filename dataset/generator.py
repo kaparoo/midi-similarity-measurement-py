@@ -54,22 +54,23 @@ Dataset = Union[
 
 def new_generator(
     root: PathLike,
+    frame_per_second: int = 20,
     slice_duration: float = 1.0,
     expansion_rate: float = 1.5,
     note_scale: float = 1.0,
-    frame_per_second: int = 20,
+    mark_onset: bool = True,
     shuffle: bool = True,
     verbose: bool = False,
 ) -> Generator[Dataset, None, None]:
     midi_parser = MIDIParser(fps=frame_per_second, note_scale=note_scale)
     for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
         score_midi = perf_root / "score.mid"
-        score_matrix = midi_parser.process(str(score_midi))
+        score_matrix, _, _ = midi_parser.process(score_midi, mark_onset=mark_onset)
         score_annotation = Annotation(path=perf_root, prefix="score")
 
         for perf_file in perf_files:
             perf_midi = perf_root / perf_file
-            perf_matrix = midi_parser.process(str(perf_midi))
+            perf_matrix, _, _ = midi_parser.process(perf_midi, mark_onset=mark_onset)
             perf_annotation = Annotation(path=perf_root, prefix=perf_midi.stem)
 
             prev_index = 0

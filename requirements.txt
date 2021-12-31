@@ -1,5 +1,6 @@
 black>=21.12b0
 ipykernel>=6.6.0
+ipywidgets>=7.6.5
 madmom>=0.16.1
 matplotlib>=3.5.1
 numpy>=1.21.5

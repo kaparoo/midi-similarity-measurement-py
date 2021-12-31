@@ -2,6 +2,7 @@
 
 import midi
 import numpy as np
+import time
 from typing import Tuple
 
 try:
@@ -19,11 +20,18 @@ def measure(
     cost_fn: CostFn = compare_midi_key,
     decay_fn: midi.DecayFn = lambda x: x,
     subsequence: bool = False,
+    measure_time: bool = False,
 ) -> Tuple[float, float]:
+    if measure_time:
+        timestamp1 = time.time()
+
     source = midi.MIDIUnitSequenceList.from_midi_matrix(source_matrix, decay_fn)
     target = midi.MIDIUnitSequenceList.from_midi_matrix(target_matrix, decay_fn)
     source.compensation_frame = compensation_frame
     target.compensation_frame = compensation_frame
+
+    if measure_time:
+        timestamp2 = time.time()
 
     source_sequence = source.repr_unit_sequence
     target_sequence = target.repr_unit_sequence
@@ -31,8 +39,21 @@ def measure(
         source_sequence, target_sequence, cost_fn, subsequence
     )
 
+    if measure_time:
+        timestamp3 = time.time()
+
     source_histogram = source.pitch_histogram
     target_histogram = target[head : tail + 1].pitch_histogram
     histogram_distance = euclidean(source_histogram, target_histogram)
 
-    return histogram_distance, timewarping_distance
+    if measure_time:
+        timestamp4 = time.time()
+        execution_times = {
+            "midi_matrix": timestamp2 - timestamp1,
+            "timewarping": timestamp3 - timestamp2,
+            "euclidean": timestamp4 - timestamp3,
+            "total": timestamp4 - timestamp1,
+        }
+        return histogram_distance, timewarping_distance, execution_times
+    else:
+        return histogram_distance, timewarping_distance

@@ -6,10 +6,10 @@ from typing import SupportsIndex, Tuple, Union
 
 try:
     from constant import *
-    from decay_fn import *
+    from decay import *
 except ImportError:
     from .constant import *
-    from .decay_fn import *
+    from .decay import *
 
 __all__ = ["MIDIUnit", "MIDIRest", "MIDIUnitSequence", "MIDIUnitSequenceList"]
 

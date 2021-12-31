@@ -2,11 +2,11 @@
 
 try:
     from constant import MAX_MIDI_KEY, MIN_MIDI_KEY, NUM_MIDI_KEYS, NUM_PITCH_CLASSES
-    from decay_fn import DecayFn, get_decay_fn
+    from decay import DecayFn, get_decay_fn
     from unit import MIDIRest, MIDIUnit, MIDIUnitSequence, MIDIUnitSequenceList
 except ImportError:
     from .constant import MAX_MIDI_KEY, MIN_MIDI_KEY, NUM_MIDI_KEYS, NUM_PITCH_CLASSES
-    from .decay_fn import DecayFn, get_decay_fn
+    from .decay import DecayFn, get_decay_fn
     from .unit import MIDIRest, MIDIUnit, MIDIUnitSequence, MIDIUnitSequenceList
 
 __all__ = [

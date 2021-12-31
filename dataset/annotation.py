@@ -9,7 +9,7 @@ __all__ = ["Annotation"]
 
 class Annotation(object):
 
-    __slot__ = ["_path", "_onsets"]
+    __slots__ = ["_path", "_onsets"]
 
     def __init__(self, path: PathLike, prefix: str) -> None:
         self._path = Path(path) / f"{prefix}_annotations.txt"
@@ -36,7 +36,7 @@ class Annotation(object):
 
 class AnnotationIter(object):
 
-    __slot__ = ["_cursor", "_onsets", "_length"]
+    __slots__ = ["_cursor", "_onsets", "_length"]
 
     def __init__(self, annotation: Annotation) -> None:
         self._cursor = 0

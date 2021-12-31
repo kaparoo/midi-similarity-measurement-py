@@ -48,7 +48,9 @@ def score_alignment(
     accuracy = true_positive + true_negative
     precision = true_positive / (true_positive + false_positive)
     recall = true_positive / (true_positive + false_negative)
-    f1_score = 2 * (precision * recall) / (precision + recall)
+    f1_score = 0.0
+    if precision + recall != 0:
+        f1_score = 2 * (precision * recall) / (precision + recall)
 
     iou = true_positive / (true_positive + false_positive + false_negative)
 

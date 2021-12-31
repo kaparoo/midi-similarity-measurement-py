@@ -132,6 +132,8 @@ if __name__ == "__main__":
     )
     plt.ylabel("MIDI Key")
     plt.xlabel("Frame")
+    xmax = score.shape[-1] - 1
+    plt.xlim([0, xmax])
     plt.ylim([0, 127])
     plt.subplot(2, 1, 2)
     plt.title("Performance")
@@ -140,9 +142,11 @@ if __name__ == "__main__":
     )
     plt.ylabel("MIDI Key")
     plt.xlabel("Frame")
-    plt.vlines(head, 0, 127, label="head")
-    plt.vlines(tail, 0, 127, label="tail")
+    plt.vlines(head, 0, 127, "r", label="head")
+    plt.vlines(tail, 0, 127, "r", label="tail")
     plt.legend()
+    xmax = perf.shape[-1] - 1
+    plt.xlim([0, xmax])
     plt.ylim([0, 127])
     plt.tight_layout()
     plt.show()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from typing import Callable
+from typing import Callable, Optional
 
 __all__ = ["DecayFn", "get_decay_fn"]
 
@@ -13,11 +13,11 @@ def linear_decay_factory(settling_frame: int = 10) -> DecayFn:
     def linear_decay(array: np.ndarray) -> np.ndarray:
         decayed_array = np.zeros_like(array, dtype=np.uint8)
         prev_pressed = False
-        for idx, elem in enumerate(array):
+        for idx, marker in enumerate(array):
             curr_velocity = 0
-            if elem <= 0:
+            if marker <= 0:
                 prev_pressed = False
-            elif elem > 1:
+            elif marker > 1:
                 curr_velocity = settling_frame - 1
                 prev_pressed = True
             else:
@@ -34,6 +34,8 @@ def linear_decay_factory(settling_frame: int = 10) -> DecayFn:
     return linear_decay
 
 
-def get_decay_fn(name: str = "linear", settling_frame: int = 10) -> DecayFn:
-    if name == "linear":
+def get_decay_fn(type: Optional[str] = None, settling_frame: int = 10) -> DecayFn:
+    if type == "linear":
         return linear_decay_factory(settling_frame)
+    else:
+        return lambda x: x

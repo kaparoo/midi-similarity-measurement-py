@@ -136,15 +136,15 @@ class MIDIUnitSequenceList(list):
             sequnece_list.append(sequence)
         return sequnece_list
 
-    def to_midi_matrix(self, use_velocity: bool = False) -> np.ndarray:
+    def to_midi_matrix(self, set_velocity: bool = False) -> np.ndarray:
         num_frames = len(self)
-        matrix = np.zeros((NUM_MIDI_KEYS, num_frames))
+        matrix = np.zeros((NUM_MIDI_KEYS, num_frames), dtype=np.float32)
         for frame_idx, sequence in enumerate(self):
             for unit in sequence:
                 if not unit.is_note():
                     break
                 midi_key, velocity = unit.values
-                if not use_velocity:
+                if not set_velocity:
                     velocity = 1
                 matrix[midi_key, frame_idx] = velocity
         return matrix
@@ -170,15 +170,15 @@ class MIDIUnitSequenceList(list):
         return histogram
 
     @property
-    def repr_unit_sequence(self) -> MIDIUnitSequence:
-        repr_sequence = MIDIUnitSequence()
+    def repr_sequence(self) -> MIDIUnitSequence:
+        sequence = MIDIUnitSequence()
         for curr_sequence in self:
             repr_unit = curr_sequence[0]
             for curr_unit in curr_sequence[1:]:
                 compensated_velocity = curr_unit.velocity + self.compensation
                 if repr_unit.velocity <= compensated_velocity:
                     repr_unit = curr_unit
-            repr_sequence.append(repr_unit)
-        if not repr_sequence:
-            repr_sequence.append(MIDIRest)
-        return repr_sequence
+            sequence.append(repr_unit)
+        if not sequence:
+            sequence.append(MIDIRest)
+        return sequence

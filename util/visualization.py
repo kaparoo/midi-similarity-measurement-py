@@ -44,8 +44,8 @@ def plot_midi_matrices(
     ymax, xmax = matrix2.shape
     if alignment is not None:
         head, tail = alignment
-        plt.vlines(head, 0, ymax - 1, label="head")
-        plt.vlines(tail, 0, ymax - 1, label="tail")
+        plt.vlines(head, 0, ymax - 1, "r", label="head")
+        plt.vlines(tail, 0, ymax - 1, "r", label="tail")
         plt.legend()
     plt.ylim([0, ymax - 1])
     plt.xlim([0, xmax - 1])

@@ -26,12 +26,12 @@ def clip(val: float, min_=float("-inf"), max_=float("inf")) -> float:
 
 
 def load_dataset_info(
-    root: PathLike, shuffle: bool = False
+    root: PathLike, score_prefix: str = "score", shuffle: bool = False
 ) -> Generator[Tuple[Path, Iterable[str]], None, None]:
     perf_dict: Dict[Path, Iterable[str]] = {}
-    for score_path in Path(root).rglob("**/score.mid"):
+    for score_path in Path(root).rglob(f"**/{score_prefix}.mid"):
         perf_root = score_path.parent
-        perf_files = [f.name for f in perf_root.glob("*.mid") if f.stem != "score"]
+        perf_files = [f.name for f in perf_root.glob("*.mid") if f.stem != score_prefix]
         if perf_files:
             perf_dict[perf_root] = perf_files
 
@@ -63,7 +63,7 @@ def new_generator(
     verbose: bool = False,
 ) -> Generator[Dataset, None, None]:
     midi_parser = MIDIParser()
-    for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
+    for perf_root, perf_files in load_dataset_info(root, score_prefix, shuffle):
         score_midi = perf_root / f"{score_prefix}.mid"
         _, score_matrix = midi_parser(score_midi, frame_per_second, mark_onset)
         score_annotation = Annotation(path=perf_root, prefix=score_prefix)
@@ -72,10 +72,14 @@ def new_generator(
             perf_midi = perf_root / perf_file
             _, perf_matrix = midi_parser(perf_midi, frame_per_second, mark_onset)
             perf_annotation = Annotation(path=perf_root, prefix=perf_midi.stem)
+            num_prev_annotations = len(perf_annotation)
 
             prev_index = 0
             prev_score_onset = perf_annotation[0]
             for curr_index, curr_score_onset in enumerate(score_annotation):
+                if curr_index >= num_prev_annotations:
+                    break
+
                 if curr_score_onset - prev_score_onset >= slice_duration:
                     score_head = math.floor(frame_per_second * prev_score_onset)
                     score_tail = math.floor(frame_per_second * curr_score_onset)

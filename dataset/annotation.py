@@ -9,7 +9,7 @@ __all__ = ["Annotation"]
 
 class Annotation(object):
 
-    __slots__ = ["_path", "_onsets"]
+    __slots__ = ["_path", "_onsets", "_length"]
 
     def __init__(self, path: PathLike, prefix: str) -> None:
         self._path = Path(path) / f"{prefix}_annotations.txt"
@@ -18,6 +18,7 @@ class Annotation(object):
             for line in f.readlines():
                 onset = float(line.split("\t")[0])
                 self._onsets.append(onset)
+        self._length = len(self._onsets)
 
     @property
     def path(self) -> str:
@@ -27,11 +28,18 @@ class Annotation(object):
     def onsets(self) -> List[float]:
         return self._onsets
 
+    @property
+    def length(self) -> int:
+        return self._length
+
     def __getitem__(self, idx: int) -> float:
         return self._onsets[idx]
 
     def __iter__(self):
         return AnnotationIter(self)
+
+    def __len__(self):
+        return self._length
 
 
 class AnnotationIter(object):
@@ -41,7 +49,7 @@ class AnnotationIter(object):
     def __init__(self, annotation: Annotation) -> None:
         self._cursor = 0
         self._onsets = annotation.onsets
-        self._length = len(self._onsets)
+        self._length = annotation.length
 
     def __iter__(self):
         return self

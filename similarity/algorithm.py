@@ -1,6 +1,6 @@
 # -*- coding: utf-* -*-
 
-import midi
+import midi_unit
 import numpy as np
 from typing import Callable, Sequence, Tuple
 
@@ -15,16 +15,16 @@ __all__ = [
 ]
 
 
-CostFn = Callable[[midi.MIDIUnit, midi.MIDIUnit], float]
+CostFn = Callable[[midi_unit.MIDIUnit, midi_unit.MIDIUnit], float]
 
 
-def compare_midi_key(s: midi.MIDIUnit, t: midi.MIDIUnit) -> float:
+def compare_midi_key(s: midi_unit.MIDIUnit, t: midi_unit.MIDIUnit) -> float:
     return float(s.midi_key != t.midi_key)
 
 
 def global_dtw(
-    source_sequence: midi.MIDIUnitSequence,
-    target_sequence: midi.MIDIUnitSequence,
+    source_sequence: midi_unit.MIDIUnitSequence,
+    target_sequence: midi_unit.MIDIUnitSequence,
     cost_fn: CostFn = compare_midi_key,
 ) -> Tuple[float, Tuple[int, int], np.ndarray, Sequence[Tuple[int, int]]]:
     source_len, target_len = len(source_sequence), len(target_sequence)
@@ -63,25 +63,22 @@ def global_dtw(
         elif y == 0:
             x -= 1
         else:
-            cost_h = cost_matrix[y][x - 1]
-            cost_v = cost_matrix[y - 1][x]
-            cost_d = cost_matrix[y - 1][x - 1]
-            if cost_h < cost_d:
-                if cost_h < cost_v:
-                    x -= 1
-                else:
-                    y -= 1
-            else:
-                y -= 1
-                if cost_d <= cost_v:
-                    x -= 1
+            costs = [
+                cost_matrix[y, x - 1],
+                cost_matrix[y - 1, x - 1],
+                cost_matrix[y - 1, x],
+            ]
+            movements = ((-1, 0), (-1, -1), (0, -1))
+            dx, dy = movements[np.argmin(costs)]
+            x += dx
+            y += dy
 
     return cost, (0, target_tail), cost_matrix, warping_path[::-1]
 
 
 def subsequence_dtw(
-    source_sequence: midi.MIDIUnitSequence,
-    target_sequence: midi.MIDIUnitSequence,
+    source_sequence: midi_unit.MIDIUnitSequence,
+    target_sequence: midi_unit.MIDIUnitSequence,
     cost_fn: CostFn = compare_midi_key,
 ) -> Tuple[float, Tuple[int, int], np.ndarray, Sequence[Tuple[int, int]]]:
     source_len, target_len = len(source_sequence), len(target_sequence)
@@ -118,18 +115,15 @@ def subsequence_dtw(
         elif x == 0:
             y -= 1
         else:
-            cost_h = cost_matrix[y][x - 1]
-            cost_v = cost_matrix[y - 1][x]
-            cost_d = cost_matrix[y - 1][x - 1]
-            if cost_h < cost_d:
-                if cost_h < cost_v:
-                    x -= 1
-                else:
-                    y -= 1
-            else:
-                y -= 1
-                if cost_d <= cost_v:
-                    x -= 1
+            costs = [
+                cost_matrix[y, x - 1],
+                cost_matrix[y - 1, x - 1],
+                cost_matrix[y - 1, x],
+            ]
+            movements = ((-1, 0), (-1, -1), (0, -1))
+            dx, dy = movements[np.argmin(costs)]
+            x += dx
+            y += dy
 
     subsequence_len = subsequence_tail - subsequence_head + 1
     cost = cost / np.sqrt(source_len * subsequence_len)
@@ -138,8 +132,8 @@ def subsequence_dtw(
 
 
 def dtw(
-    source_sequence: midi.MIDIUnitSequence,
-    target_sequence: midi.MIDIUnitSequence,
+    source_sequence: midi_unit.MIDIUnitSequence,
+    target_sequence: midi_unit.MIDIUnitSequence,
     cost_fn: CostFn = compare_midi_key,
     subsequence: bool = False,
 ) -> Tuple[float, Tuple[int, int], np.ndarray, Sequence[Tuple[int, int]]]:

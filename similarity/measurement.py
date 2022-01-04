@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import midi
+import midi_unit
 import numpy as np
 import time
 from typing import Tuple
@@ -16,25 +16,22 @@ __all__ = ["measure"]
 def measure(
     source_matrix: np.ndarray,
     target_matrix: np.ndarray,
-    compensation_frame: int = 0,
     cost_fn: CostFn = compare_midi_key,
-    decay_fn: midi.DecayFn = lambda x: x,
+    decay_fn: midi_unit.DecayFn = lambda x: x,
     subsequence: bool = False,
     measure_time: bool = False,
 ) -> Tuple[float, float]:
     if measure_time:
         timestamp1 = time.time()
 
-    source = midi.MIDIUnitSequenceList.from_midi_matrix(source_matrix, decay_fn)
-    target = midi.MIDIUnitSequenceList.from_midi_matrix(target_matrix, decay_fn)
-    source.compensation_frame = compensation_frame
-    target.compensation_frame = compensation_frame
+    source = midi_unit.MIDIUnitSeqList.from_midi_matrix(source_matrix, decay_fn)
+    target = midi_unit.MIDIUnitSeqList.from_midi_matrix(target_matrix, decay_fn)
 
     if measure_time:
         timestamp2 = time.time()
 
-    source_sequence = source.repr_unit_sequence
-    target_sequence = target.repr_unit_sequence
+    source_sequence = source.repr_sequence
+    target_sequence = target.repr_sequence
     timewarping_distance, (head, tail), _, _ = dtw(
         source_sequence, target_sequence, cost_fn, subsequence
     )

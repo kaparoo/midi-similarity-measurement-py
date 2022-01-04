@@ -2,12 +2,10 @@
 
 import math
 import numpy as np
-
+import numpy.random as random
 from os import PathLike
 from pathlib import Path
-
-import random
-from typing import Dict, Generator, Iterable, Tuple, Union
+from typing import Generator, List, Sequence, Tuple, Union
 
 try:
     from annotation import Annotation
@@ -17,60 +15,63 @@ except ImportError:
     from .midi_parser import MIDIParser
 
 
-__all__ = ["new"]
+__all__ = ["Dataset", "new_generator"]
 
 
-def clip(val: float, min_=float("-inf"), max_=float("inf")) -> float:
+def _clip(val: float, min_=float("-inf"), max_=float("inf")) -> float:
     # val: (-inf, inf) -> [min_, max_]
     return max(min(val, max_), min_)
 
 
-def load_dataset_info(
-    root: PathLike, score_prefix: str = "score", shuffle: bool = False
-) -> Generator[Tuple[Path, Iterable[str]], None, None]:
-    perf_dict: Dict[Path, Iterable[str]] = {}
-    for score_path in Path(root).rglob(f"**/{score_prefix}.mid"):
-        perf_root = score_path.parent
-        perf_files = [f.name for f in perf_root.glob("*.mid") if f.stem != score_prefix]
-        if perf_files:
-            perf_dict[perf_root] = perf_files
-
-    perf_roots = list(perf_dict.keys())
+def _load_dataset_info(
+    root: PathLike, score: str = "score", shuffle: bool = False
+) -> Generator[Tuple[Path, Sequence[str]], None, None]:
+    perf_roots: List[Path] = []
+    for score_path in Path(root).rglob(f"**/{score}.mid"):
+        perf_roots.append(score_path.parent)
     if shuffle:
         random.shuffle(perf_roots)
-
     for perf_root in perf_roots:
-        perf_files = perf_dict[perf_root]
-        if shuffle:
-            random.shuffle(perf_files)
-        yield perf_root, perf_files
+        perf_files = [f.name for f in perf_root.glob("*.mid") if f.stem != score]
+        if perf_files:
+            if shuffle:
+                random.shuffle(perf_files)
+            yield perf_root, perf_files
 
 
-Dataset = Union[
-    Tuple[np.ndarray, np.ndarray, Tuple[int, int]],
-    Tuple[np.ndarray, np.ndarray, Tuple[int, int], Tuple[Path, str]],
-]
+Dataset = Tuple[np.ndarray, np.ndarray, Tuple[int, int]]
 
 
 def new_generator(
     root: PathLike,
-    frame_per_second: int = 20,
-    slice_duration: float = 1.0,
-    expansion_rate: float = 1.5,
     score_prefix: str = "score",
+    slice_duration: Union[float, Tuple[float, float]] = 1.0,
+    expansion_rate: Union[float, Tuple[float, float]] = 1.5,
+    frames_per_second: int = 20,
     mark_onset: bool = True,
     shuffle: bool = True,
     verbose: bool = False,
-) -> Generator[Dataset, None, None]:
+) -> Generator[Union[Dataset, Tuple[Dataset, Tuple[Path, float, float]]], None, None,]:
     midi_parser = MIDIParser()
-    for perf_root, perf_files in load_dataset_info(root, score_prefix, shuffle):
+
+    get_slice_duration = lambda: slice_duration
+    if not isinstance(slice_duration, float):
+        start1, end1 = slice_duration
+        get_slice_duration = lambda: random.uniform(start1, end1)
+
+    get_expansion_rate = lambda: expansion_rate
+    if not isinstance(expansion_rate, float):
+        start2, end2 = expansion_rate
+        get_expansion_rate = lambda: random.uniform(start2, end2)
+
+    for perf_root, perf_files in _load_dataset_info(root, score_prefix, shuffle):
         score_midi = perf_root / f"{score_prefix}.mid"
-        _, score_matrix = midi_parser(score_midi, frame_per_second, mark_onset)
+        _, score_matrix = midi_parser(score_midi, frames_per_second, mark_onset)
         score_annotation = Annotation(path=perf_root, prefix=score_prefix)
 
         for perf_file in perf_files:
             perf_midi = perf_root / perf_file
-            _, perf_matrix = midi_parser(perf_midi, frame_per_second, mark_onset)
+            _, perf_matrix = midi_parser(perf_midi, frames_per_second, mark_onset)
             perf_annotation = Annotation(path=perf_root, prefix=perf_midi.stem)
             num_prev_annotations = len(perf_annotation)
 
@@ -80,17 +81,20 @@ def new_generator(
                 if curr_index >= num_prev_annotations:
                     break
 
+                slice_duration = get_slice_duration()
+                expansion_rate = get_expansion_rate()
+
                 if curr_score_onset - prev_score_onset >= slice_duration:
-                    score_head = math.floor(frame_per_second * prev_score_onset)
-                    score_tail = math.floor(frame_per_second * curr_score_onset)
+                    score_head = math.floor(frames_per_second * prev_score_onset)
+                    score_tail = math.floor(frames_per_second * curr_score_onset)
                     score_slice: np.ndarray = np.copy(
                         score_matrix[:, score_head:score_tail]
                     )
 
                     prev_perf_onset = perf_annotation[prev_index]
                     curr_perf_onset = perf_annotation[curr_index]
-                    perf_head = math.floor(frame_per_second * prev_perf_onset)
-                    perf_tail = math.floor(frame_per_second * curr_perf_onset)
+                    perf_head = math.floor(frames_per_second * prev_perf_onset)
+                    perf_tail = math.floor(frames_per_second * curr_perf_onset)
                     perf_size = perf_tail - perf_head
 
                     num_perf_frames = perf_matrix.shape[-1]
@@ -98,10 +102,10 @@ def new_generator(
                     expanded_perf_head = perf_head - random.randint(
                         0, math.floor((expansion_rate - 1.0) * perf_size)
                     )
-                    expanded_perf_head = clip(expanded_perf_head, 0, num_perf_frames)
+                    expanded_perf_head = _clip(expanded_perf_head, 0, num_perf_frames)
                     expanded_perf_head = int(expanded_perf_head)
                     expanded_perf_tail = perf_head + expanded_perf_size
-                    expanded_perf_tail = clip(expanded_perf_tail, 0, num_perf_frames)
+                    expanded_perf_tail = _clip(expanded_perf_tail, 0, num_perf_frames)
                     expanded_perf_tail = int(expanded_perf_tail)
 
                     perf_slice: np.ndarray = np.copy(
@@ -116,7 +120,11 @@ def new_generator(
                     if not verbose:
                         yield score_slice, perf_slice, alignment
                     else:
-                        yield score_slice, perf_slice, alignment, (perf_root, perf_file)
+                        yield (score_slice, perf_slice, alignment), (
+                            perf_midi,
+                            slice_duration,
+                            expansion_rate,
+                        )
 
                     prev_index = curr_index
                     prev_score_onset = curr_score_onset

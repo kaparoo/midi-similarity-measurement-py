@@ -1,98 +1,79 @@
 # -*- coding: utf-8 -*-
 
-from typing import Tuple
-import madmom.io.midi as mm_midi
+"""A parser that parses the midi file to a numpy array."""
+
+import math
+import mido
 import numpy as np
 from os import PathLike
+from pathlib import Path
+from typing import Tuple
 
 
 __all__ = ["MIDIParser"]
 
 
 class MIDIParser(object):
+    def __new__(cls):
+        if not hasattr(cls, "_instance"):
+            cls._instance = super(MIDIParser, cls).__new__(cls)
+        return cls._instance
 
-    __slot__ = ["_fps", "_scale"]
+    def __call__(
+        self,
+        path: PathLike,
+        fps: int = 20,
+        mark_onset: bool = False,
+        use_channel: bool = False,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        if not Path(path).is_file():
+            raise FileNotFoundError(f"No such midi file: '{path}'")
+        if not isinstance(fps, int):
+            raise TypeError("`fps` must be a positive integer")
+        elif fps <= 0:
+            raise ValueError("`fps` must be a positive integer")
 
-    def __init__(self, fps: int = 20, note_scale: float = 1.0):
-        self._fps = fps
-        self._scale = note_scale
+        delta_time, cache, notes = 0, {}, []
+        for msg in mido.MidiFile(path):
+            delta_time += msg.time
+            note_on = msg.type == "note_on"
+            note_off = msg.type == "note_off"
+            if not (note_on or note_off):
+                continue
+            pitch, velocity = msg.note, msg.velocity
+            if use_channel:
+                pitch += 128 * (channel := msg.channel)
+            if note_on and velocity > 0:
+                cache[pitch] = (delta_time, velocity)
+            elif note_off or (note_on and velocity == 0):
+                if pitch in cache:
+                    onset_time, velocity = cache[pitch]
+                    duration = delta_time - onset_time
+                    if not use_channel:
+                        notes.append((pitch, onset_time, duration, velocity))
+                    else:
+                        pitch_ = pitch % 128
+                        notes.append((pitch_, onset_time, duration, velocity, channel))
+                    del cache[pitch]
+        notes.sort(key=lambda note: (note[1], -note[0]))  # lowest onset, highest pitch
 
-    @property
-    def fps(self) -> int:
-        return self._fps
-
-    @fps.setter
-    def fps(self, val: int) -> None:
-        self._fps = val
-
-    @property
-    def note_scale(self) -> float:
-        return self._scale
-
-    @note_scale.setter
-    def note_scale(self, val: float) -> None:
-        self._scale = val
-
-    def process(
-        self, path: PathLike, mark_onset: bool = False
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        midi = mm_midi.MIDIFile(path)
-        notes = np.asarray(sorted(midi.notes, key=lambda n: (n[0], n[1] * -1)))
-        onsets = []
-        num_frames = int(np.ceil((notes[-1, 0] + notes[-1, 2]) * self._fps))
+        # TODO(kaparoo): need axis for channel?
+        num_frames = math.ceil(fps * (notes[-1][1] + notes[-1][2]))
         midi_matrix = np.zeros((128, num_frames), dtype=np.uint8)
-        for note in notes:
-            onset = int(np.ceil(note[0] * self._fps))
-            offset = int(np.ceil((note[0] + self._scale * note[2]) * self._fps))
-            midi_pitch = int(note[1])
-            midi_matrix[midi_pitch, onset:offset] = 1
+        for pitch, onset_time, duration, *_ in notes:
+            onset = math.ceil(fps * onset_time)
+            offset = math.ceil(fps * (onset_time + duration))
+            midi_matrix[pitch, onset:offset] = 1
             if mark_onset:
-                midi_matrix[midi_pitch, onset] = 2
-            onsets.append(onset)
-        onsets = np.sort(np.asarray(onsets)).astype(np.float32)
-        return midi_matrix, notes, onsets
+                midi_matrix[pitch, onset] = 2
 
+        return np.array(notes), midi_matrix
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    midi_parser = MIDIParser(fps=20, note_scale=1.0)
-    midi_path = (
-        "../dataset/newbie-dataset/Clementi/sonatina_op36_no3_pt1/0_wcpark_1.mid"
-    )
-
-    matrix1, _, _ = midi_parser.process(midi_path, mark_onset=False)
-    matrix2, _, _ = midi_parser.process(midi_path, mark_onset=True)
-
-    plt.figure(figsize=(16, 9), facecolor="white")
-
-    plt.subplot(2, 1, 1)
-    plt.title("Without Marking")
-    plt.imshow(
-        matrix1[:, 500:700],
-        cmap="gray",
-        aspect="auto",
-        origin="lower",
-        interpolation="nearest",
-    )
-    plt.ylabel("MIDI Key")
-    plt.xlabel("Frame")
-    plt.ylim([0, 127])
-    plt.xlim([0, 199])
-
-    plt.subplot(2, 1, 2)
-    plt.title("With Marking")
-    plt.imshow(
-        matrix2[:, 500:700],
-        cmap="gray",
-        aspect="auto",
-        origin="lower",
-        interpolation="nearest",
-    )
-    plt.ylabel("MIDI Key")
-    plt.xlabel("Frame")
-    plt.ylim([0, 127])
-    plt.xlim([0, 199])
-
-    plt.tight_layout()
-    plt.show()
+    @staticmethod
+    def parse(
+        path: PathLike,
+        fps: int = 20,
+        mark_onset: bool = False,
+        use_channel: bool = False,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        return MIDIParser().__call__(path, fps, mark_onset, use_channel)

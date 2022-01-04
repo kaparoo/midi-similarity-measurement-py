@@ -57,20 +57,20 @@ def new_generator(
     frame_per_second: int = 20,
     slice_duration: float = 1.0,
     expansion_rate: float = 1.5,
-    note_scale: float = 1.0,
+    score_prefix: str = "score",
     mark_onset: bool = True,
     shuffle: bool = True,
     verbose: bool = False,
 ) -> Generator[Dataset, None, None]:
-    midi_parser = MIDIParser(fps=frame_per_second, note_scale=note_scale)
+    midi_parser = MIDIParser()
     for perf_root, perf_files in load_dataset_info(root=root, shuffle=shuffle):
-        score_midi = perf_root / "score.mid"
-        score_matrix, _, _ = midi_parser.process(score_midi, mark_onset=mark_onset)
-        score_annotation = Annotation(path=perf_root, prefix="score")
+        score_midi = perf_root / f"{score_prefix}.mid"
+        _, score_matrix = midi_parser(score_midi, frame_per_second, mark_onset)
+        score_annotation = Annotation(path=perf_root, prefix=score_prefix)
 
         for perf_file in perf_files:
             perf_midi = perf_root / perf_file
-            perf_matrix, _, _ = midi_parser.process(perf_midi, mark_onset=mark_onset)
+            _, perf_matrix = midi_parser(perf_midi, frame_per_second, mark_onset)
             perf_annotation = Annotation(path=perf_root, prefix=perf_midi.stem)
 
             prev_index = 0

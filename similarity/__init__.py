@@ -9,7 +9,7 @@ try:
         global_dtw,
         subsequence_dtw,
     )
-    from measurement import measure
+    from measurement import measure, Similarity
 except ImportError:
     from .algorithm import (
         CostFn,
@@ -19,7 +19,7 @@ except ImportError:
         global_dtw,
         subsequence_dtw,
     )
-    from .measurement import measure
+    from .measurement import measure, Similarity
 
 
 __all__ = [
@@ -30,4 +30,5 @@ __all__ = [
     "global_dtw",
     "subsequence_dtw",
     "measure",
+    "Similarity",
 ]

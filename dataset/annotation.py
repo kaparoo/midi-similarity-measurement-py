@@ -58,4 +58,4 @@ if __name__ == "__main__":
     path = "../dataset/newbie-dataset/Clementi/sonatina_op36_no3_pt1"
     annotation = Annotation(path, prefix="score")
     onsets = annotation.onsets
-    print(f"onsets: {onsets} ({len(onsets)})")  # [0.0, 0.5, ..., 47.55] (104)
+    print(f"onsets: {onsets} ({len(onsets)})")  # [0.0, 0.55, ..., 53.3] (104)

@@ -58,7 +58,7 @@ class MIDIParser(object):
         notes.sort(key=lambda note: (note[1], -note[0]))  # lowest onset, highest pitch
 
         # TODO(kaparoo): need axis for channel?
-        num_frames = math.ceil(fps * (notes[-1][1] + notes[-1][2]))
+        num_frames = math.ceil(fps * (notes[-1][1] + notes[-1][2])) + 1
         midi_matrix = np.zeros((128, num_frames), dtype=np.uint8)
         for pitch, onset_time, duration, *_ in notes:
             onset = math.ceil(fps * onset_time)

@@ -18,16 +18,21 @@ def score_alignment(
     min_tail = min(true_tail, pred_tail)
     max_tail = max(true_tail, pred_tail)
 
-    true_positive = (min_tail - max_head + 1) / length
+    if min_tail <= max_head:
+        return {
+            "confusion_matrix": [[0.0, 0.0], [0.0, 0.0]],
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "iou": 0.0,
+        }
 
-    true_negative = 0.0
-    if max_tail + 1 < length:
-        true_negative += (length - max_tail - 1) / length
-    if min_head > 0:
-        true_negative += (min_head + 1) / length
+    true_positive = (min_tail - max_head + 1) / length
+    true_negative = (length - max_tail + min_head) / length
 
     head_diff = (max_head - min_head) / length
-    tail_diff = (max_tail - min_tail) / length
+    tail_diff = (max_tail - min_tail - 1) / length if max_tail != min_tail else 0.0
 
     false_positive = 0.0
     false_negative = 0.0

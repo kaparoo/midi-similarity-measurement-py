@@ -1,0 +1,3 @@
+[submodule "dataset/midi_parser"]
+	path = dataset/midi_parser
+	url = https://github.com/sabana-music-lab/midi_parser

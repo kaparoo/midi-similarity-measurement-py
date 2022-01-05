@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+import numbers
 import numpy as np
 import numpy.random as random
 from os import PathLike
@@ -42,6 +43,60 @@ def _load_dataset_info(
 Dataset = Tuple[np.ndarray, np.ndarray, Tuple[int, int]]
 
 
+def _verify_arguments(
+    root: PathLike,
+    score_prefix: str,
+    slice_duration: Union[float, Tuple[float, float]],
+    expansion_rate: Union[float, Tuple[float, float]],
+    frames_per_second: int,
+) -> Tuple[
+    Path, str, Union[float, Tuple[float, float]], Union[float, Tuple[float, float]], int
+]:
+    def _verify_float(number: float) -> float:
+        if not isinstance(number, numbers.Real):
+            raise TypeError()
+        if (number := float(number)) <= 0:
+            raise ValueError()
+        return number
+
+    if not isinstance(root, (str, PathLike)):
+        raise TypeError()
+    if not (root := Path(root)).is_dir():
+        raise FileNotFoundError()
+
+    if not isinstance(score_prefix, str):
+        raise TypeError()
+    if not (score_prefix := score_prefix.strip()):
+        raise ValueError()
+
+    if isinstance(slice_duration, numbers.Real):
+        if (slice_duration := float(slice_duration)) <= 0.0:
+            raise ValueError()
+    elif isinstance(slice_duration, (tuple, list)) and len(slice_duration) == 2:
+        min_, max_ = _verify_float(slice_duration[0]), _verify_float(slice_duration[1])
+        slice_duration = (min_, max_) if min_ <= max_ else (max_, min_)
+    else:
+        raise TypeError()
+
+    if isinstance(expansion_rate, numbers.Real):
+        if (expansion_rate := float(expansion_rate)) < 1.0:
+            raise ValueError()
+    elif isinstance(expansion_rate, (tuple, list)) and len(expansion_rate) == 2:
+        min_, max_ = _verify_float(expansion_rate[0]), _verify_float(expansion_rate[1])
+        if min_ < 1.0:
+            raise ValueError()
+        expansion_rate = (min_, max_) if min_ <= max_ else (max_, min_)
+    else:
+        raise TypeError()
+
+    if not isinstance(frames_per_second, numbers.Integral):
+        raise TypeError()
+    if (frames_per_second := int(frames_per_second)) <= 0:
+        raise ValueError()
+
+    return root, score_prefix, slice_duration, expansion_rate, frames_per_second
+
+
 def new_generator(
     root: PathLike,
     score_prefix: str = "score",
@@ -52,6 +107,16 @@ def new_generator(
     shuffle: bool = True,
     verbose: bool = False,
 ) -> Generator[Union[Dataset, Tuple[Dataset, Tuple[Path, float, float]]], None, None,]:
+    (
+        root,
+        score_prefix,
+        slice_duration,
+        expansion_rate,
+        frames_per_second,
+    ) = _verify_arguments(
+        root, score_prefix, slice_duration, expansion_rate, frames_per_second
+    )
+
     midi_parser = MIDIParser()
 
     get_slice_duration = lambda: slice_duration
@@ -99,9 +164,11 @@ def new_generator(
 
                     num_perf_frames = perf_matrix.shape[-1]
                     expanded_perf_size = expansion_rate * perf_size
-                    expanded_perf_head = perf_head - random.randint(
-                        0, math.floor((expansion_rate - 1.0) * perf_size)
-                    )
+                    expanded_perf_head = perf_head
+                    if expansion_rate > 1.0:
+                        expanded_perf_head = perf_head - random.randint(
+                            0, math.floor((expansion_rate - 1.0) * perf_size)
+                        )
                     expanded_perf_head = _clip(expanded_perf_head, 0, num_perf_frames)
                     expanded_perf_head = int(expanded_perf_head)
                     expanded_perf_tail = perf_head + expanded_perf_size

@@ -1,6 +1,34 @@
 # -*- coding: utf-8 -*-
 
-from . import algorithm
-from .similarity import measure
+try:
+    from algorithm import (
+        CostFn,
+        compare_midi_key,
+        dtw,
+        euclidean,
+        global_dtw,
+        subsequence_dtw,
+    )
+    from measurement import measure, Similarity
+except ImportError:
+    from .algorithm import (
+        CostFn,
+        compare_midi_key,
+        dtw,
+        euclidean,
+        global_dtw,
+        subsequence_dtw,
+    )
+    from .measurement import measure, Similarity
 
-__all__ = ["algorithm", "measure"]
+
+__all__ = [
+    "CostFn",
+    "compare_midi_key",
+    "dtw",
+    "euclidean",
+    "global_dtw",
+    "subsequence_dtw",
+    "measure",
+    "Similarity",
+]

@@ -22,6 +22,7 @@ def run(
     slice_duration: Tuple[float, Tuple[float, float]] = 1.0,
     expansion_rate: Tuple[float, Tuple[float, float]] = 1.0,
     subsequence: bool = True,
+    shuffle: bool = True,
     verbose: bool = False,
 ) -> Tuple[List[Similarity], List[Similarity]]:
     generator = dataset.new_generator(
@@ -30,6 +31,7 @@ def run(
         slice_duration,
         expansion_rate,
         frames_per_second,
+        shuffle=shuffle,
         verbose=verbose,
     )
 

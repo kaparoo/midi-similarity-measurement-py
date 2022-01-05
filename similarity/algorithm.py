@@ -52,6 +52,7 @@ def global_dtw(
     cost = cost_matrix[source_tail, target_tail]
     cost = cost / np.sqrt(source_len * target_len)
 
+    movements = ((-1, 0), (-1, -1), (0, -1))
     warping_path = []
     y, x = source_tail, target_tail
     while True:
@@ -68,7 +69,6 @@ def global_dtw(
                 cost_matrix[y - 1, x - 1],
                 cost_matrix[y - 1, x],
             ]
-            movements = ((-1, 0), (-1, -1), (0, -1))
             dx, dy = movements[np.argmin(costs)]
             x += dx
             y += dy
@@ -104,6 +104,7 @@ def subsequence_dtw(
     subsequence_tail = target_len - np.argmin(delta_functions[::-1]) - 1
     cost = delta_functions[subsequence_tail]
 
+    movements = ((-1, 0), (-1, -1), (0, -1))
     warping_path = []
     subsequence_head = 0
     y, x = source_len - 1, subsequence_tail
@@ -120,7 +121,6 @@ def subsequence_dtw(
                 cost_matrix[y - 1, x - 1],
                 cost_matrix[y - 1, x],
             ]
-            movements = ((-1, 0), (-1, -1), (0, -1))
             dx, dy = movements[np.argmin(costs)]
             x += dx
             y += dy

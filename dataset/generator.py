@@ -137,19 +137,21 @@ def new_generator(
         for perf_file in perf_files:
             perf_midi = perf_root / perf_file
             _, perf_matrix = midi_parser(perf_midi, frames_per_second, mark_onset)
+            num_perf_frames = perf_matrix.shape[-1]
+
             perf_annotation = Annotation(path=perf_root, prefix=perf_midi.stem)
-            num_prev_annotations = len(perf_annotation)
+            num_perf_annotations = len(perf_annotation)
 
             prev_index = 0
-            prev_score_onset = perf_annotation[0]
+            prev_score_onset = score_annotation[0]
             for curr_index, curr_score_onset in enumerate(score_annotation):
-                if curr_index >= num_prev_annotations:
+                if curr_index >= num_perf_annotations:
                     break
 
                 slice_duration = get_slice_duration()
                 expansion_rate = get_expansion_rate()
 
-                if curr_score_onset - prev_score_onset >= slice_duration:
+                if curr_score_onset - prev_score_onset > slice_duration:
                     score_head = math.floor(frames_per_second * prev_score_onset)
                     score_tail = math.floor(frames_per_second * curr_score_onset)
                     score_slice: np.ndarray = np.copy(
@@ -162,7 +164,6 @@ def new_generator(
                     perf_tail = math.floor(frames_per_second * curr_perf_onset)
                     perf_size = perf_tail - perf_head
 
-                    num_perf_frames = perf_matrix.shape[-1]
                     expanded_perf_size = expansion_rate * perf_size
                     expanded_perf_head = perf_head
                     if expansion_rate > 1.0:
@@ -185,7 +186,7 @@ def new_generator(
                     )
 
                     if not verbose:
-                        yield score_slice, perf_slice, alignment
+                        yield (score_slice, perf_slice, alignment)
                     else:
                         yield (score_slice, perf_slice, alignment), (
                             perf_midi,

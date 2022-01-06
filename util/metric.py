@@ -50,7 +50,9 @@ def score_alignment(
         [false_negative, true_negative],
     ]
 
-    accuracy = true_positive + true_negative
+    accuracy = true_positive + true_negative / (
+        true_positive + true_negative + false_positive + false_negative
+    )
     precision = true_positive / (true_positive + false_positive)
     recall = true_positive / (true_positive + false_negative)
     f1_score = 0.0

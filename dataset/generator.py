@@ -19,11 +19,6 @@ except ImportError:
 __all__ = ["Dataset", "new_generator"]
 
 
-def _clip(val: float, min_=float("-inf"), max_=float("inf")) -> float:
-    # val: (-inf, inf) -> [min_, max_]
-    return max(min(val, max_), min_)
-
-
 def _load_dataset_info(
     root: PathLike, score: str = "score", shuffle: bool = False
 ) -> Generator[Tuple[Path, Sequence[str]], None, None]:
@@ -170,10 +165,10 @@ def new_generator(
                         expanded_perf_head = perf_head - random.randint(
                             0, math.floor((expansion_rate - 1.0) * perf_size)
                         )
-                    expanded_perf_head = _clip(expanded_perf_head, 0, num_perf_frames)
+                    expanded_perf_head = np.clip(expanded_perf_head, 0, num_perf_frames)
                     expanded_perf_head = int(expanded_perf_head)
                     expanded_perf_tail = perf_head + expanded_perf_size
-                    expanded_perf_tail = _clip(expanded_perf_tail, 0, num_perf_frames)
+                    expanded_perf_tail = np.clip(expanded_perf_tail, 0, num_perf_frames)
                     expanded_perf_tail = int(expanded_perf_tail)
 
                     perf_slice: np.ndarray = np.copy(

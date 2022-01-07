@@ -167,7 +167,7 @@ def new_generator(
                         )
                     expanded_perf_head = np.clip(expanded_perf_head, 0, num_perf_frames)
                     expanded_perf_head = int(expanded_perf_head)
-                    expanded_perf_tail = perf_head + expanded_perf_size
+                    expanded_perf_tail = expanded_perf_head + expanded_perf_size
                     expanded_perf_tail = np.clip(expanded_perf_tail, 0, num_perf_frames)
                     expanded_perf_tail = int(expanded_perf_tail)
 
